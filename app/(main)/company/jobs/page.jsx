@@ -29,18 +29,71 @@ function JobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Check if company exists and has an ID
+      if (!company || !company.id) {
+        console.error('Company data is missing or invalid');
+        toast.error('Company profile not found. Please complete your profile first.');
+        setJobs([]);
+        return;
+      }
+
+      console.log('Fetching jobs for company ID:', company.id);
+
+      // Step 1: Fetch jobs without the relationship
+      const { data: jobsData, error: jobsError } = await supabase
         .from('Jobs')
-        .select('*, Job_Submissions(count)')
+        .select('*')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      setJobs(data || []);
+      if (jobsError) {
+        console.error('Supabase error fetching jobs:', jobsError);
+        toast.error(`Failed to load jobs: ${jobsError.message || 'Database error'}`);
+        setJobs([]);
+        return;
+      }
+
+      console.log('Jobs fetched successfully:', jobsData?.length || 0, 'jobs found');
+
+      // Step 2: If we have jobs, fetch submission counts separately
+      if (jobsData && jobsData.length > 0) {
+        try {
+          // Get all job IDs
+          const jobIds = jobsData.map(job => job.id);
+
+          // Fetch submission counts for each job
+          const { data: submissionCounts, error: submissionsError } = await supabase
+            .from('Job_Submissions')
+            .select('job_id, count')
+            .in('job_id', jobIds)
+            .group('job_id');
+
+          if (submissionsError) {
+            console.warn('Error fetching submission counts:', submissionsError);
+            // Continue without submission counts
+          } else if (submissionCounts) {
+            // Create a map of job_id to count
+            const countsMap = {};
+            submissionCounts.forEach(item => {
+              countsMap[item.job_id] = parseInt(item.count) || 0;
+            });
+
+            // Add submission counts to jobs
+            jobsData.forEach(job => {
+              job.submissionCount = countsMap[job.id] || 0;
+            });
+          }
+        } catch (countError) {
+          console.warn('Exception fetching submission counts:', countError);
+          // Continue without submission counts
+        }
+      }
+
+      setJobs(jobsData || []);
     } catch (error) {
-      console.error('Error fetching jobs:', error);
-      toast.error('Failed to load jobs');
+      console.error('Exception fetching jobs:', error);
+      toast.error(`Failed to load jobs: ${error.message || 'Unknown error'}`);
+      setJobs([]);
     } finally {
       setLoading(false);
     }
@@ -48,16 +101,16 @@ function JobsPage() {
 
   const handleDeleteJob = async () => {
     if (!jobToDelete) return;
-    
+
     try {
       // Delete job
       const { error } = await supabase
         .from('Jobs')
         .delete()
         .eq('id', jobToDelete.id);
-      
+
       if (error) throw error;
-      
+
       // Update local state
       setJobs(jobs.filter(job => job.id !== jobToDelete.id));
       toast.success('Job deleted successfully');
@@ -70,7 +123,7 @@ function JobsPage() {
     }
   };
 
-  const filteredJobs = jobs.filter(job => 
+  const filteredJobs = jobs.filter(job =>
     job.job_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     job.job_description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -90,7 +143,7 @@ function JobsPage() {
           </Button>
         </Link>
       </div>
-      
+
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="relative">
@@ -104,7 +157,7 @@ function JobsPage() {
           </div>
         </CardContent>
       </Card>
-      
+
       {loading ? (
         <div className="text-center py-12">
           <p>Loading jobs...</p>
@@ -122,7 +175,7 @@ function JobsPage() {
                         <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">Expired</span>
                       )}
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
                       <div className="flex items-center">
                         <BriefcaseBusiness className="mr-1 h-4 w-4" />
@@ -138,15 +191,15 @@ function JobsPage() {
                       </div>
                       <div className="flex items-center">
                         <Users className="mr-1 h-4 w-4" />
-                        {job.Job_Submissions?.[0]?.count || 0} Submissions
+                        {job.submissionCount || 0} Submissions
                       </div>
                     </div>
-                    
+
                     <p className="text-gray-700 line-clamp-2 mb-4">
                       {job.job_description}
                     </p>
                   </div>
-                  
+
                   <div className="flex flex-row md:flex-col gap-2 mt-4 md:mt-0 justify-end">
                     <Link href={`/company/jobs/${job.id}`}>
                       <Button variant="outline" size="sm" className="w-full">
@@ -154,17 +207,17 @@ function JobsPage() {
                         Edit
                       </Button>
                     </Link>
-                    
+
                     <Link href={`/jobs/${job.id}`} target="_blank">
                       <Button variant="outline" size="sm" className="w-full">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View
                       </Button>
                     </Link>
-                    
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                       onClick={() => {
                         setJobToDelete(job);
@@ -186,8 +239,8 @@ function JobsPage() {
             <BriefcaseBusiness className="h-12 w-12 text-gray-400 mb-4" />
             <h2 className="text-xl font-semibold mb-2">No jobs found</h2>
             <p className="text-gray-500 text-center mb-6">
-              {searchQuery 
-                ? "No jobs match your search criteria" 
+              {searchQuery
+                ? "No jobs match your search criteria"
                 : "You haven't created any jobs yet"}
             </p>
             {!searchQuery && (
@@ -201,7 +254,7 @@ function JobsPage() {
           </CardContent>
         </Card>
       )}
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>

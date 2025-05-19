@@ -29,6 +29,22 @@ function CompanyDashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      // Check if company exists and has an ID
+      if (!company || !company.id) {
+        console.error('Company data is missing or invalid');
+        setStats({
+          totalJobs: 0,
+          activeJobs: 0,
+          totalSubmissions: 0,
+          pendingReview: 0
+        });
+        setRecentJobs([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching dashboard data for company ID:', company.id);
+
       // Fetch jobs
       const { data: jobs, error: jobsError } = await supabase
         .from('Jobs')
@@ -36,32 +52,68 @@ function CompanyDashboard() {
         .eq('company_id', company.id)
         .order('created_at', { ascending: false });
 
-      if (jobsError) throw jobsError;
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError);
+        throw new Error(`Failed to fetch jobs: ${jobsError.message}`);
+      }
 
-      // Fetch submissions
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('Job_Submissions')
-        .select('*, Jobs!inner(*)')
-        .eq('Jobs.company_id', company.id);
+      console.log('Jobs fetched successfully:', jobs?.length || 0, 'jobs found');
 
-      if (submissionsError) throw submissionsError;
+      // Fetch submissions - use a safer approach without inner join if no jobs exist
+      let submissions = [];
+      if (jobs && jobs.length > 0) {
+        try {
+          // Get all job IDs
+          const jobIds = jobs.map(job => job.id);
+
+          // Fetch submissions for these jobs
+          const { data: submissionsData, error: submissionsError } = await supabase
+            .from('Job_Submissions')
+            .select('*')
+            .in('job_id', jobIds);
+
+          if (submissionsError) {
+            console.error('Error fetching submissions:', submissionsError);
+            // Continue with empty submissions instead of throwing
+            console.log('Continuing with empty submissions list');
+          } else {
+            submissions = submissionsData || [];
+            console.log('Submissions fetched successfully:', submissions.length, 'submissions found');
+          }
+        } catch (submissionFetchError) {
+          console.error('Exception fetching submissions:', submissionFetchError);
+          // Continue with empty submissions
+          console.log('Continuing with empty submissions list due to exception');
+        }
+      } else {
+        console.log('No jobs found, skipping submissions fetch');
+      }
 
       // Calculate stats
       const now = new Date();
-      const activeJobs = jobs.filter(job => new Date(job.application_deadline) >= now);
-      const pendingReview = submissions.filter(sub => sub.status === 'pending');
+      const activeJobs = jobs ? jobs.filter(job => new Date(job.application_deadline) >= now) : [];
+      const pendingReview = submissions ? submissions.filter(sub => sub.status === 'pending') : [];
 
       setStats({
-        totalJobs: jobs.length,
+        totalJobs: jobs?.length || 0,
         activeJobs: activeJobs.length,
-        totalSubmissions: submissions.length,
+        totalSubmissions: submissions?.length || 0,
         pendingReview: pendingReview.length
       });
 
       // Set recent jobs (limit to 3)
-      setRecentJobs(jobs.slice(0, 3));
+      setRecentJobs(jobs ? jobs.slice(0, 3) : []);
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set default values on error
+      setStats({
+        totalJobs: 0,
+        activeJobs: 0,
+        totalSubmissions: 0,
+        pendingReview: 0
+      });
+      setRecentJobs([]);
     } finally {
       setLoading(false);
     }
@@ -70,7 +122,7 @@ function CompanyDashboard() {
   return (
     <div>
       <h2 className='my-3 font-bold text-2xl'>Company Dashboard</h2>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
@@ -82,7 +134,7 @@ function CompanyDashboard() {
             <p className="text-sm text-gray-500">Total Jobs</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center">
             <div className="rounded-full bg-green-100 p-3 mb-4">
@@ -92,7 +144,7 @@ function CompanyDashboard() {
             <p className="text-sm text-gray-500">Active Jobs</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center">
             <div className="rounded-full bg-purple-100 p-3 mb-4">
@@ -102,7 +154,7 @@ function CompanyDashboard() {
             <p className="text-sm text-gray-500">Total Submissions</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center">
             <div className="rounded-full bg-amber-100 p-3 mb-4">
@@ -113,7 +165,7 @@ function CompanyDashboard() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Recent Jobs */}
       <Card className="mb-8">
         <CardHeader>
@@ -154,7 +206,7 @@ function CompanyDashboard() {
           )}
         </CardContent>
       </Card>
-      
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>

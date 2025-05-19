@@ -62,45 +62,110 @@ function Provider({ children }) {
 
                     // Check if user exists in the appropriate table based on userType
                     if (storedUserType === "company") {
-                        // Check if company exists
-                        const { data: companyData, error } = await supabase
-                            .from('Companies')
-                            .select('*')
-                            .eq('email', user.email)
-                            .maybeSingle();
+                        console.log("Checking for company account with email:", user.email);
 
-                        if (error) {
-                            console.error("Error fetching company:", error);
-                            return;
-                        }
-
-                        if (companyData) {
-                            console.log("Found existing company:", companyData);
-                            setCompany(companyData);
-                        } else {
-                            console.log("Creating new company for:", user.email);
-                            // Create a new company record if it doesn't exist
-                            const { data: newCompany, error: insertError } = await supabase
+                        try {
+                            // Check if company exists
+                            const { data: companyData, error } = await supabase
                                 .from('Companies')
-                                .insert([
-                                    {
-                                        email: user.email,
-                                        name: user.user_metadata?.name || '',
-                                        picture: user.user_metadata?.picture || '',
-                                        is_onboarded: false
-                                    }
-                                ])
-                                .select();
+                                .select('*')
+                                .eq('email', user.email)
+                                .maybeSingle();
 
-                            if (insertError) {
-                                console.error("Error creating company:", insertError);
+                            if (error) {
+                                console.error("Error fetching company:", error);
+                                // Continue with company creation instead of returning
+                                console.log("Will attempt to create company despite fetch error");
+
+                                // Create a new company record if fetch failed
+                                const { data: newCompany, error: insertError } = await supabase
+                                    .from('Companies')
+                                    .insert([
+                                        {
+                                            email: user.email,
+                                            name: user.user_metadata?.name || 'Company Account',
+                                            picture: user.user_metadata?.picture || '',
+                                            is_onboarded: false,
+                                            industry_type: 'Technology',
+                                            created_at: new Date().toISOString()
+                                        }
+                                    ])
+                                    .select();
+
+                                if (insertError) {
+                                    console.error("Error creating company after fetch error:", insertError);
+                                    // Set a minimal company object to prevent null references
+                                    setCompany({
+                                        id: 'temp-id',
+                                        email: user.email,
+                                        name: user.user_metadata?.name || 'Company Account',
+                                        is_onboarded: false
+                                    });
+                                    return;
+                                }
+
+                                if (newCompany && newCompany.length > 0) {
+                                    console.log("New company created after fetch error:", newCompany[0]);
+                                    setCompany(newCompany[0]);
+                                }
                                 return;
                             }
 
-                            if (newCompany && newCompany.length > 0) {
-                                console.log("New company created:", newCompany[0]);
-                                setCompany(newCompany[0]);
+                            if (companyData) {
+                                console.log("Found existing company:", companyData);
+                                setCompany(companyData);
+                            } else {
+                                console.log("No company found, creating new company for:", user.email);
+                                // Create a new company record if it doesn't exist
+                                const { data: newCompany, error: insertError } = await supabase
+                                    .from('Companies')
+                                    .insert([
+                                        {
+                                            email: user.email,
+                                            name: user.user_metadata?.name || 'Company Account',
+                                            picture: user.user_metadata?.picture || '',
+                                            is_onboarded: false,
+                                            industry_type: 'Technology',
+                                            created_at: new Date().toISOString()
+                                        }
+                                    ])
+                                    .select();
+
+                                if (insertError) {
+                                    console.error("Error creating company:", insertError);
+                                    // Set a minimal company object to prevent null references
+                                    setCompany({
+                                        id: 'temp-id',
+                                        email: user.email,
+                                        name: user.user_metadata?.name || 'Company Account',
+                                        is_onboarded: false
+                                    });
+                                    return;
+                                }
+
+                                if (newCompany && newCompany.length > 0) {
+                                    console.log("New company created:", newCompany[0]);
+                                    setCompany(newCompany[0]);
+                                } else {
+                                    console.error("No company data returned after insert");
+                                    // Set a minimal company object to prevent null references
+                                    setCompany({
+                                        id: 'temp-id',
+                                        email: user.email,
+                                        name: user.user_metadata?.name || 'Company Account',
+                                        is_onboarded: false
+                                    });
+                                }
                             }
+                        } catch (companyError) {
+                            console.error("Exception in company handling:", companyError);
+                            // Set a minimal company object to prevent null references
+                            setCompany({
+                                id: 'temp-id',
+                                email: user.email,
+                                name: user.user_metadata?.name || 'Company Account',
+                                is_onboarded: false
+                            });
                         }
                     } else {
                         // Default to client user type

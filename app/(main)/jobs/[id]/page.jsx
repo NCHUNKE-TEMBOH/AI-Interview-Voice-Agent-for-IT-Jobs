@@ -65,20 +65,44 @@ function JobDetailPage() {
             // Generate a unique interview ID
             const interview_id = `interview_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-            // Create an interview for this job
+            // Step 1: Pre-generate interview questions using our API
+            console.log("Generating interview questions...");
+            const questionsResponse = await fetch('/api/generate-questions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jobTitle: job.job_title,
+                    jobDescription: job.job_description,
+                    requiredSkills: job.required_skills,
+                    experienceLevel: job.experience_level,
+                    questionCount: job.question_count || 10
+                }),
+            });
+
+            if (!questionsResponse.ok) {
+                throw new Error(`Failed to generate questions: ${questionsResponse.statusText}`);
+            }
+
+            const questionsData = await questionsResponse.json();
+            console.log("Generated questions:", questionsData.questions);
+
+            // Step 2: Create an interview with the pre-generated questions
             const interviewData = {
-                interview_id: interview_id, // Add a unique interview_id
-                jobPosition: job.job_title,
-                userEmail: user.email,
-                userName: user.name || 'Candidate',
+                interview_id: interview_id,
+                useremail: user.email,
+                username: user.name || 'Candidate',
+                jobposition: job.job_title,
+                jobdescription: job.job_description,
                 duration: 15, // Default duration in minutes
                 type: "Job Application",
-                experienceLevel: job.experience_level || "Mid-Level",
-                requiredSkills: job.required_skills || "",
-                companycriterion: job.ai_criteria || "", // Match the database column name
-                companyId: job.company_id,
-                jobId: job.id,
-                questionList: JSON.stringify([]) // Add an empty question list
+                experiencelevel: job.experience_level || "Mid-Level",
+                requiredskills: job.required_skills || "",
+                companycriteria: job.ai_criteria || "",
+                companyid: job.company_id,
+                jobid: job.id,
+                questionlist: JSON.stringify(questionsData.questions) // Store pre-generated questions
             };
 
             console.log("Creating interview with data:", interviewData);
@@ -98,7 +122,7 @@ function JobDetailPage() {
 
             console.log("Interview created:", interview);
 
-            // Create a job submission record
+            // Step 3: Create a job submission record
             const submissionData = {
                 job_id: job.id,
                 user_name: user.name || 'Candidate',

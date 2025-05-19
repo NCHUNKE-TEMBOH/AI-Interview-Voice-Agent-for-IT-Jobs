@@ -32,40 +32,111 @@ function SubmissionsPage() {
 
   const fetchJobs = async () => {
     try {
+      // Check if company exists and has an ID
+      if (!company || !company.id) {
+        console.error('Company data is missing or invalid');
+        setJobs([]);
+        return;
+      }
+
+      console.log('Fetching jobs for company ID:', company.id);
+
       const { data, error } = await supabase
         .from('Jobs')
         .select('id, job_title')
         .eq('company_id', company.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching jobs:', error);
+        toast.error(`Failed to load jobs: ${error.message || 'Database error'}`);
+        setJobs([]);
+        return;
+      }
+
+      console.log('Jobs fetched successfully:', data?.length || 0, 'jobs found');
       setJobs(data || []);
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Exception fetching jobs:', error);
+      toast.error(`Failed to load jobs: ${error.message || 'Unknown error'}`);
+      setJobs([]);
     }
   };
 
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Check if company exists and has an ID
+      if (!company || !company.id) {
+        console.error('Company data is missing or invalid');
+        toast.error('Company profile not found. Please complete your profile first.');
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching submissions for company ID:', company.id);
+
+      // Step 1: First get all jobs for this company
+      const { data: companyJobs, error: jobsError } = await supabase
+        .from('Jobs')
+        .select('id, job_title')
+        .eq('company_id', company.id);
+
+      if (jobsError) {
+        console.error('Error fetching company jobs:', jobsError);
+        toast.error(`Failed to load company jobs: ${jobsError.message || 'Database error'}`);
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Company jobs fetched:', companyJobs?.length || 0, 'jobs found');
+
+      if (!companyJobs || companyJobs.length === 0) {
+        console.log('No jobs found for this company, no submissions to fetch');
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Get job IDs
+      const jobIds = companyJobs.map(job => job.id);
+
+      // Step 3: Fetch submissions for these jobs
+      const { data: submissionsData, error: submissionsError } = await supabase
         .from('Job_Submissions')
-        .select(`
-          *,
-          Jobs!inner(
-            id,
-            job_title,
-            company_id
-          )
-        `)
-        .eq('Jobs.company_id', company.id)
+        .select('*')
+        .in('job_id', jobIds)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setSubmissions(data || []);
+      if (submissionsError) {
+        console.error('Error fetching submissions:', submissionsError);
+        toast.error(`Failed to load submissions: ${submissionsError.message || 'Database error'}`);
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Submissions fetched:', submissionsData?.length || 0, 'submissions found');
+
+      // Step 4: Create a map of job IDs to job details
+      const jobMap = {};
+      companyJobs.forEach(job => {
+        jobMap[job.id] = job;
+      });
+
+      // Step 5: Combine submissions with job details
+      const enhancedSubmissions = submissionsData.map(submission => ({
+        ...submission,
+        Jobs: jobMap[submission.job_id] || { id: submission.job_id, job_title: 'Unknown Job' }
+      }));
+
+      setSubmissions(enhancedSubmissions || []);
     } catch (error) {
       console.error('Error fetching submissions:', error);
-      toast.error('Failed to load submissions');
+      toast.error(`Failed to load submissions: ${error.message || 'Unknown error'}`);
+      setSubmissions([]);
     } finally {
       setLoading(false);
     }
@@ -79,15 +150,15 @@ function SubmissionsPage() {
         .eq('id', submissionId);
 
       if (error) throw error;
-      
+
       // Update local state
-      setSubmissions(submissions.map(sub => 
+      setSubmissions(submissions.map(sub =>
         sub.id === submissionId ? { ...sub, status } : sub
       ));
-      
+
       // Close dialog if open
       setFeedbackDialogOpen(false);
-      
+
       toast.success(`Candidate ${status === 'accepted' ? 'accepted' : 'rejected'}`);
     } catch (error) {
       console.error('Error updating submission status:', error);
@@ -98,15 +169,20 @@ function SubmissionsPage() {
   const filteredSubmissions = submissions.filter(submission => {
     let matchesJob = true;
     let matchesStatus = true;
-    
+
     if (selectedJob !== 'all') {
-      matchesJob = submission.Jobs.id === parseInt(selectedJob);
+      // Handle both string and number job IDs
+      const jobId = submission.Jobs?.id;
+      const selectedJobId = selectedJob;
+
+      // Convert both to strings for comparison
+      matchesJob = String(jobId) === String(selectedJobId);
     }
-    
+
     if (selectedStatus !== 'all') {
       matchesStatus = submission.status === selectedStatus;
     }
-    
+
     return matchesJob && matchesStatus;
   });
 
@@ -139,7 +215,7 @@ function SubmissionsPage() {
   return (
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Interview Submissions</h1>
-      
+
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -159,7 +235,7 @@ function SubmissionsPage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium mb-1 block">Filter by Status</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -177,7 +253,7 @@ function SubmissionsPage() {
           </div>
         </CardContent>
       </Card>
-      
+
       {loading ? (
         <div className="text-center py-12">
           <p>Loading submissions...</p>
@@ -196,7 +272,7 @@ function SubmissionsPage() {
                         {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
                       </span>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
                       <div className="flex items-center">
                         <Calendar className="mr-1 h-4 w-4" />
@@ -209,7 +285,7 @@ function SubmissionsPage() {
                         <span className="font-medium">Email:</span> {submission.user_email}
                       </div>
                     </div>
-                    
+
                     <div className="mb-4">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">Match Score</span>
@@ -219,7 +295,7 @@ function SubmissionsPage() {
                       </div>
                       <Progress value={submission.feedback?.matchScore || 0} className="h-2" />
                     </div>
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
                         <div className="text-sm text-gray-500">Technical Skills</div>
@@ -247,10 +323,10 @@ function SubmissionsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-row md:flex-col gap-2 mt-4 md:mt-0 justify-end">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setCurrentSubmission(submission);
                         setFeedbackDialogOpen(true);
@@ -258,20 +334,20 @@ function SubmissionsPage() {
                     >
                       View Details
                     </Button>
-                    
+
                     {submission.status === 'pending' && (
                       <>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
                           onClick={() => updateSubmissionStatus(submission.id, 'accepted')}
                         >
                           <ThumbsUp className="mr-2 h-4 w-4" />
                           Accept
                         </Button>
-                        
-                        <Button 
-                          variant="outline" 
+
+                        <Button
+                          variant="outline"
                           className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
                           onClick={() => updateSubmissionStatus(submission.id, 'rejected')}
                         >
@@ -299,7 +375,7 @@ function SubmissionsPage() {
           </CardContent>
         </Card>
       )}
-      
+
       {/* Feedback Dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
         <DialogContent className="max-w-3xl">
@@ -309,7 +385,7 @@ function SubmissionsPage() {
               Detailed AI feedback for {currentSubmission?.user_name}
             </DialogDescription>
           </DialogHeader>
-          
+
           {currentSubmission && (
             <div className="space-y-6 max-h-[70vh] overflow-y-auto py-4">
               <div className="flex justify-between items-center">
@@ -321,91 +397,91 @@ function SubmissionsPage() {
                   {currentSubmission.status.charAt(0).toUpperCase() + currentSubmission.status.slice(1)}
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Job Position</h4>
                 <p>{currentSubmission.Jobs.job_title}</p>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Interview Date</h4>
                 <p>{new Date(currentSubmission.created_at).toLocaleString()}</p>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Overall Rating</h4>
                 <div className="flex items-center gap-2">
-                  <Progress 
-                    value={currentSubmission.feedback?.rating?.totalRating * 10 || 0} 
-                    className="h-2 flex-1" 
+                  <Progress
+                    value={currentSubmission.feedback?.rating?.totalRating * 10 || 0}
+                    className="h-2 flex-1"
                   />
                   <span className="font-semibold">
                     {currentSubmission.feedback?.rating?.totalRating || 0}/10
                   </span>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Match Score</h4>
                 <div className="flex items-center gap-2">
-                  <Progress 
-                    value={currentSubmission.feedback?.matchScore || 0} 
-                    className="h-2 flex-1" 
+                  <Progress
+                    value={currentSubmission.feedback?.matchScore || 0}
+                    className="h-2 flex-1"
                   />
                   <span className="font-semibold">
                     {currentSubmission.feedback?.matchScore || 0}%
                   </span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-sm font-medium mb-2">Technical Skills</h4>
                   <div className="flex items-center gap-2">
-                    <Progress 
-                      value={currentSubmission.feedback?.rating?.technicalSkills * 10 || 0} 
-                      className="h-2 flex-1" 
+                    <Progress
+                      value={currentSubmission.feedback?.rating?.technicalSkills * 10 || 0}
+                      className="h-2 flex-1"
                     />
                     <span className="font-semibold">
                       {currentSubmission.feedback?.rating?.technicalSkills || 0}/10
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium mb-2">Communication</h4>
                   <div className="flex items-center gap-2">
-                    <Progress 
-                      value={currentSubmission.feedback?.rating?.communication * 10 || 0} 
-                      className="h-2 flex-1" 
+                    <Progress
+                      value={currentSubmission.feedback?.rating?.communication * 10 || 0}
+                      className="h-2 flex-1"
                     />
                     <span className="font-semibold">
                       {currentSubmission.feedback?.rating?.communication || 0}/10
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium mb-2">Problem Solving</h4>
                   <div className="flex items-center gap-2">
-                    <Progress 
-                      value={currentSubmission.feedback?.rating?.problemSolving * 10 || 0} 
-                      className="h-2 flex-1" 
+                    <Progress
+                      value={currentSubmission.feedback?.rating?.problemSolving * 10 || 0}
+                      className="h-2 flex-1"
                     />
                     <span className="font-semibold">
                       {currentSubmission.feedback?.rating?.problemSolving || 0}/10
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium mb-2">Experience</h4>
                   <div className="flex items-center gap-2">
-                    <Progress 
-                      value={currentSubmission.feedback?.rating?.experience * 10 || 0} 
-                      className="h-2 flex-1" 
+                    <Progress
+                      value={currentSubmission.feedback?.rating?.experience * 10 || 0}
+                      className="h-2 flex-1"
                     />
                     <span className="font-semibold">
                       {currentSubmission.feedback?.rating?.experience || 0}/10
@@ -413,9 +489,9 @@ function SubmissionsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Summary</h4>
                 <div className="bg-gray-50 p-4 rounded-md">
@@ -424,7 +500,7 @@ function SubmissionsPage() {
                   ))}
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-2">Recommendation</h4>
                 <div className={`p-4 rounded-md ${currentSubmission.feedback?.recommendation ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -441,19 +517,19 @@ function SubmissionsPage() {
                   <p>{currentSubmission.feedback?.recommendationMsg}</p>
                 </div>
               </div>
-              
+
               {currentSubmission.status === 'pending' && (
                 <div className="flex justify-end gap-4 pt-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
                     onClick={() => updateSubmissionStatus(currentSubmission.id, 'rejected')}
                   >
                     <ThumbsDown className="mr-2 h-4 w-4" />
                     Reject
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => updateSubmissionStatus(currentSubmission.id, 'accepted')}
                   >

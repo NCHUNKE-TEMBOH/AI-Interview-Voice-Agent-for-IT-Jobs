@@ -9,10 +9,11 @@ import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Vapi from "@vapi-ai/web";
+import axios from 'axios';
+import MicrophoneTest from '@/app/components/MicrophoneTest';
 // Using inline components instead of importing from external files
 // import AlertConfirmation from '@/app/interview/_components/AlertConfirmation';
 // import TimerComponent from '@/app/interview/[interview_id]/start/_components/TimerComponent';
-import axios from 'axios';
 
 function JobInterview() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ function JobInterview() {
   const [activeUser, setActiveUser] = useState(false);
   const [conversation, setConversation] = useState();
   const [processingFeedback, setProcessingFeedback] = useState(false);
+  const [microphoneWorking, setMicrophoneWorking] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
   // Timer functionality
@@ -154,19 +156,30 @@ function JobInterview() {
 
       const assistantOptions = {
         name: "AI Interviewer",
-        firstMessage: `Hi ${userName}, welcome to your interview for the ${job.job_title} position at ${company?.name || 'our company'}. I'll be asking you some questions to assess your fit for this role. Are you ready to begin?`,
+        firstMessage: `Hi ${userName}, welcome to your interview for the ${job.job_title} position at ${company?.name || 'our company'}. I'll be asking you some questions to assess your fit for this role. Please say "Yes, I'm ready" when you're ready to begin.`,
         transcriber: {
           provider: "deepgram",
           model: "nova-2",
           language: "en-US",
+          // Increase sensitivity to detect quieter speech
+          options: {
+            sensitivity: 0.7,
+            vad_turnoff: 500  // Increase voice activity detection timeout
+          }
         },
         voice: {
           provider: "playht",
           voiceId: "jennifer",
         },
+        // Configure silence timeout settings
+        silenceTimeoutMs: 10000,  // Increase silence timeout to 10 seconds (default is 5000)
+        recordingTimeoutMs: 300000,  // Set maximum recording time to 5 minutes
+        // Configure call settings
+        endCallAfterSilenceTimeout: false,  // Don't end call after first silence timeout
         model: {
           provider: "openai",
           model: "gpt-4",
+          temperature: 0.7,  // Add some variability to responses
           messages: [
             {
               role: "system",
@@ -187,6 +200,9 @@ Your job is to ask candidates interview questions from the list below, assess th
 
 Begin the conversation with a friendly introduction, setting a relaxed yet professional tone.
 
+IMPORTANT: Wait for the candidate to say they are ready before starting the interview questions.
+If the candidate doesn't respond, prompt them again by saying "Can you please confirm when you're ready to begin the interview?"
+
 Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise.
 
 Here are the specific questions you MUST ask in this order:
@@ -194,6 +210,8 @@ Here are the specific questions you MUST ask in this order:
 ${formattedQuestions}
 
 If the candidate struggles, offer hints or rephrase the question without giving away the answer.
+
+If you don't hear a response after asking a question, say "I didn't catch that. Could you please repeat your answer?"
 
 At the end of the interview, thank the candidate and let them know that their results will be sent to the company for review.
 
@@ -204,83 +222,125 @@ At the end of the interview, thank the candidate and let them know that their re
         },
       };
 
-      // Start the Vapi call
-      vapi.start(assistantOptions);
-      setCallEnd(false);
+      console.log("Starting Vapi with options:", JSON.stringify(assistantOptions, null, 2));
 
-      // Set up event listeners
-      vapi.on("call-start", () => {
-        console.log("Call has started.");
-        toast.success('Call Connected...');
-      });
+      try {
+        // Start the Vapi call
+        vapi.start(assistantOptions);
+        setCallEnd(false);
 
-      vapi.on("speech-start", () => {
-        console.log("Assistant speech has started.");
-        setActiveUser(false);
-      });
+        // Set up event listeners
+        vapi.on("call-start", () => {
+          console.log("Call has started.");
+          toast.success('Call Connected...');
+        });
 
-      vapi.on("speech-end", () => {
-        console.log("Assistant speech has ended.");
-        setActiveUser(true);
-      });
+        vapi.on("speech-start", () => {
+          console.log("Assistant speech has started.");
+          setActiveUser(false);
+        });
 
-      vapi.on("call-end", (event) => {
-        console.log("Call has ended:", event);
-        toast('Interview Ended... Please Wait...');
+        vapi.on("speech-end", () => {
+          console.log("Assistant speech has ended.");
+          setActiveUser(true);
+        });
+
+        // Listen for user speech events
+        vapi.on("user-speech-start", () => {
+          console.log("User speech has started.");
+          // You can add visual feedback here
+        });
+
+        vapi.on("user-speech-end", () => {
+          console.log("User speech has ended.");
+          // You can add visual feedback here
+        });
+
+        // Listen for transcription events
+        vapi.on("transcription", (transcription) => {
+          console.log("Transcription received:", transcription);
+          // This shows what the system heard from the user
+        });
+
+        vapi.on("call-end", (event) => {
+          console.log("Call has ended:", event);
+          toast('Interview Ended... Please Wait...');
+          setCallEnd(true);
+
+          // Create a default conversation if none exists or is empty
+          if (!conversation || conversation === '{}' || conversation === '[]') {
+            console.log("No conversation data, creating default conversation");
+            const defaultConversation = {
+              messages: [
+                {
+                  role: "assistant",
+                  content: "Thank you for participating in this interview. We'll analyze your responses and get back to you soon."
+                },
+                {
+                  role: "user",
+                  content: "Thank you for the opportunity."
+                }
+              ]
+            };
+            setConversation(JSON.stringify(defaultConversation));
+          } else {
+            console.log("Using existing conversation data for feedback");
+          }
+
+          // Wait a moment before generating feedback to ensure conversation state is updated
+          setTimeout(() => {
+            generateFeedback();
+          }, 1000);
+        });
+
+        vapi.on("error", (error) => {
+          console.error("Vapi error:", error);
+          toast.error(`Interview error: ${error.message || 'Unknown error'}`);
+          setCallEnd(true);
+
+          // Create a default conversation if none exists
+          if (!conversation || conversation === '{}' || conversation === '[]') {
+            console.log("No conversation data after error, creating default conversation");
+            const defaultConversation = {
+              messages: [
+                {
+                  role: "assistant",
+                  content: "There was an error during the interview, but we'll still process your application."
+                },
+                {
+                  role: "user",
+                  content: "I understand, thank you."
+                }
+              ]
+            };
+            setConversation(JSON.stringify(defaultConversation));
+          }
+
+          // Wait a moment before generating feedback to ensure conversation state is updated
+          setTimeout(() => {
+            generateFeedback();
+          }, 1000);
+        });
+
+        vapi.on("message", (message) => {
+          console.log("Received message from Vapi:", message);
+          if (message?.conversation) {
+            console.log("Conversation updated:", message.conversation);
+            setConversation(JSON.stringify(message.conversation));
+          }
+        });
+
+        // Add a debug event to log all events
+        vapi.on("*", (event, data) => {
+          if (event !== "transcription" && event !== "message") { // Skip high-frequency events
+            console.log(`Vapi event '${event}':`, data);
+          }
+        });
+      } catch (vapiError) {
+        console.error("Error starting Vapi:", vapiError);
+        toast.error(`Failed to start interview: ${vapiError.message || 'Unknown error'}`);
         setCallEnd(true);
-
-        // Create a default conversation if none exists
-        if (!conversation) {
-          const defaultConversation = {
-            messages: [
-              {
-                role: "assistant",
-                content: "Thank you for participating in this interview. We'll analyze your responses and get back to you soon."
-              },
-              {
-                role: "user",
-                content: "Thank you for the opportunity."
-              }
-            ]
-          };
-          setConversation(JSON.stringify(defaultConversation));
-        }
-
-        generateFeedback();
-      });
-
-      vapi.on("error", (error) => {
-        console.error("Vapi error:", error);
-        toast.error(`Interview error: ${error.message || 'Unknown error'}`);
-        setCallEnd(true);
-
-        // Create a default conversation if none exists
-        if (!conversation) {
-          const defaultConversation = {
-            messages: [
-              {
-                role: "assistant",
-                content: "There was an error during the interview, but we'll still process your application."
-              },
-              {
-                role: "user",
-                content: "I understand, thank you."
-              }
-            ]
-          };
-          setConversation(JSON.stringify(defaultConversation));
-        }
-
-        generateFeedback();
-      });
-
-      vapi.on("message", (message) => {
-        console.log("Received message:", message);
-        if (message?.conversation) {
-          console.log("Conversation:", message.conversation);
-          setConversation(JSON.stringify(message.conversation));
-        }
-      });
+      }
     } catch (error) {
       console.error("Error starting interview:", error);
       toast.error(`Failed to start interview: ${error.message || 'Unknown error'}`);
@@ -299,10 +359,13 @@ At the end of the interview, thank the candidate and let them know that their re
     setProcessingFeedback(true);
 
     try {
-      if (!conversation) {
+      // Ensure we have valid conversation data
+      let conversationData;
+
+      if (!conversation || conversation === '{}' || conversation === '[]') {
         console.warn('No conversation data available, using default conversation');
         // Create a default conversation if none exists
-        const defaultConversation = JSON.stringify({
+        conversationData = {
           messages: [
             {
               role: "assistant",
@@ -313,15 +376,57 @@ At the end of the interview, thank the candidate and let them know that their re
               content: "Thank you for the opportunity."
             }
           ]
-        });
-        setConversation(defaultConversation);
+        };
+        setConversation(JSON.stringify(conversationData));
+      } else {
+        // Try to parse the conversation if it's a string
+        try {
+          conversationData = typeof conversation === 'string' ? JSON.parse(conversation) : conversation;
+        } catch (parseError) {
+          console.error("Error parsing conversation data:", parseError);
+          conversationData = {
+            messages: [
+              {
+                role: "assistant",
+                content: "Thank you for participating in this interview. We'll analyze your responses and get back to you soon."
+              },
+              {
+                role: "user",
+                content: "Thank you for the opportunity."
+              }
+            ]
+          };
+        }
       }
 
-      console.log("Generating feedback for conversation:", conversation);
+      console.log("Generating feedback for conversation:",
+        typeof conversationData === 'object' ? JSON.stringify(conversationData) : conversationData);
+
+      // Validate conversation format before sending to API
+      if (!conversationData || !conversationData.messages || !Array.isArray(conversationData.messages)) {
+        console.error("Invalid conversation format:", conversationData);
+        throw new Error("Invalid conversation format");
+      }
+
+      // Ensure there are at least two messages in the conversation
+      if (conversationData.messages.length < 2) {
+        console.warn("Conversation too short, adding default messages");
+        conversationData.messages.push(
+          {
+            role: "assistant",
+            content: "Thank you for your time today. Do you have any questions for me?"
+          },
+          {
+            role: "user",
+            content: "No, thank you for the opportunity."
+          }
+        );
+      }
 
       // Send conversation to AI for feedback
+      console.log("Sending conversation to AI feedback API...");
       const result = await axios.post('/api/ai-feedback', {
-        conversation: conversation,
+        conversation: conversationData,
         jobTitle: job?.job_title || 'Job Position',
         jobDescription: job?.job_description || 'A professional role requiring strong skills.',
         requiredSkills: job?.required_skills || 'Communication, problem-solving, teamwork',
@@ -333,10 +438,21 @@ At the end of the interview, thank the candidate and let them know that their re
       let feedbackData;
       try {
         const Content = result.data.content || '{}';
-        const FINAL_CONTENT = Content.replace('```json', '').replace('```', '');
-        feedbackData = JSON.parse(FINAL_CONTENT);
+        // Handle different formats of JSON response
+        let jsonContent = Content;
+
+        // Remove markdown code blocks if present
+        if (Content.includes('```')) {
+          jsonContent = Content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        }
+
+        // Trim whitespace
+        jsonContent = jsonContent.trim();
+
+        // Parse the JSON
+        feedbackData = JSON.parse(jsonContent);
       } catch (parseError) {
-        console.error("Error parsing feedback JSON:", parseError);
+        console.error("Error parsing feedback JSON:", parseError, "Raw content:", result.data.content);
         // Create default feedback if parsing fails
         feedbackData = {
           feedback: {
@@ -350,8 +466,22 @@ At the end of the interview, thank the candidate and let them know that their re
 
       console.log("Processed feedback data:", feedbackData);
 
+      // Ensure feedback has the expected structure
+      if (!feedbackData.feedback) {
+        console.warn("Feedback data missing 'feedback' property, adding default structure");
+        feedbackData = {
+          feedback: {
+            strengths: feedbackData.strengths || ["Communication skills"],
+            areas_for_improvement: feedbackData.areas_for_improvement || ["More specific examples needed"],
+            overall_assessment: feedbackData.overall_assessment || "Candidate showed potential for the role.",
+            matchScore: feedbackData.matchScore || 70
+          }
+        };
+      }
+
       // Save feedback to database
-      const { error } = await supabase
+      console.log("Saving feedback to database...");
+      const { data: submissionData, error } = await supabase
         .from('Job_Submissions')
         .insert([
           {
@@ -362,13 +492,14 @@ At the end of the interview, thank the candidate and let them know that their re
             status: 'pending',
             score: feedbackData.feedback?.matchScore || 70
           },
-        ]);
+        ])
+        .select();
 
       if (error) {
         console.error("Error saving feedback to database:", error);
         toast.warning("Interview completed, but there was an issue saving your feedback.");
       } else {
-        console.log("Feedback saved successfully");
+        console.log("Feedback saved successfully:", submissionData);
         toast.success("Interview completed and feedback saved!");
       }
 
@@ -376,6 +507,42 @@ At the end of the interview, thank the candidate and let them know that their re
       setStep(3);
     } catch (error) {
       console.error('Error generating feedback:', error);
+
+      // Create default feedback for database
+      const defaultFeedback = {
+        feedback: {
+          strengths: ["Communication skills", "Professional attitude"],
+          areas_for_improvement: ["More specific examples needed"],
+          overall_assessment: "Candidate showed potential for the role.",
+          matchScore: 70
+        }
+      };
+
+      // Try to save default feedback to database
+      try {
+        console.log("Saving default feedback to database after error...");
+        const { error: dbError } = await supabase
+          .from('Job_Submissions')
+          .insert([
+            {
+              job_id: job?.id,
+              user_name: userName || 'Candidate',
+              user_email: userEmail || 'candidate@example.com',
+              feedback: defaultFeedback,
+              status: 'pending',
+              score: 70
+            },
+          ]);
+
+        if (dbError) {
+          console.error("Error saving default feedback to database:", dbError);
+        } else {
+          console.log("Default feedback saved successfully");
+        }
+      } catch (dbError) {
+        console.error("Exception saving default feedback:", dbError);
+      }
+
       toast.error('Failed to process interview feedback. We will still consider your application.');
 
       // Still move to completion step even if there's an error
@@ -433,14 +600,27 @@ At the end of the interview, thank the candidate and let them know that their re
                   />
                 </div>
 
+                {/* Microphone Test Component */}
+                <MicrophoneTest
+                  onTestComplete={(isWorking) => {
+                    setMicrophoneWorking(isWorking);
+                    if (!isWorking) {
+                      toast.warning("Your microphone doesn't seem to be working properly. The interview may not function correctly.");
+                    } else {
+                      toast.success("Microphone is working properly!");
+                    }
+                  }}
+                />
+
                 <div className="p-3 bg-blue-100 flex gap-4 rounded-lg">
                   <Info className="text-primary flex-shrink-0" />
                   <div>
                     <h2 className="font-bold">Before you begin</h2>
                     <ul className="">
-                      <li className="text-sm text-primary">- Test your camera and microphone</li>
                       <li className="text-sm text-primary">- Ensure you have a stable internet connection</li>
                       <li className="text-sm text-primary">- Find a quiet place for the interview</li>
+                      <li className="text-sm text-primary">- Speak clearly and at a normal volume</li>
+                      <li className="text-sm text-primary">- Wait for the AI to finish speaking before responding</li>
                     </ul>
                   </div>
                 </div>

@@ -67,25 +67,64 @@ function JobDetailPage() {
 
             // Step 1: Pre-generate interview questions using our API
             console.log("Generating interview questions...");
-            const questionsResponse = await fetch('/api/generate-questions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    jobTitle: job.job_title,
-                    jobDescription: job.job_description,
-                    requiredSkills: job.required_skills,
-                    experienceLevel: job.experience_level,
-                    questionCount: job.question_count || 10
-                }),
-            });
+            let questionsData;
+            try {
+                const questionsResponse = await fetch('/api/generate-questions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jobTitle: job.job_title,
+                        jobDescription: job.job_description,
+                        requiredSkills: job.required_skills,
+                        experienceLevel: job.experience_level,
+                        questionCount: job.question_count || 10
+                    }),
+                });
 
-            if (!questionsResponse.ok) {
-                throw new Error(`Failed to generate questions: ${questionsResponse.statusText}`);
+                // Get the response data even if status is not OK
+                questionsData = await questionsResponse.json();
+
+                if (!questionsResponse.ok) {
+                    console.warn(`API returned status ${questionsResponse.status}: ${questionsResponse.statusText}`);
+                    console.warn("API response:", questionsData);
+
+                    if (!questionsData.questions) {
+                        // Create default questions if none were returned
+                        questionsData.questions = [
+                            `Tell me about your experience related to ${job.job_title}.`,
+                            `What specific skills do you have that make you a good fit for this position?`,
+                            `How do you stay updated with the latest trends and technologies in this field?`,
+                            `Describe a challenging project you worked on and how you overcame obstacles.`,
+                            `How do you handle tight deadlines and pressure?`,
+                            `Give an example of how you've used problem-solving skills in a previous role.`,
+                            `How do you collaborate with team members who have different working styles?`,
+                            `What interests you most about this position?`,
+                            `Where do you see yourself professionally in 5 years?`,
+                            `Do you have any questions about the role or company?`
+                        ];
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching questions:", error);
+                // Create default questions if fetch fails
+                questionsData = {
+                    questions: [
+                        `Tell me about your experience related to ${job.job_title}.`,
+                        `What specific skills do you have that make you a good fit for this position?`,
+                        `How do you stay updated with the latest trends and technologies in this field?`,
+                        `Describe a challenging project you worked on and how you overcame obstacles.`,
+                        `How do you handle tight deadlines and pressure?`,
+                        `Give an example of how you've used problem-solving skills in a previous role.`,
+                        `How do you collaborate with team members who have different working styles?`,
+                        `What interests you most about this position?`,
+                        `Where do you see yourself professionally in 5 years?`,
+                        `Do you have any questions about the role or company?`
+                    ]
+                };
             }
 
-            const questionsData = await questionsResponse.json();
             console.log("Generated questions:", questionsData.questions);
 
             // Step 2: Create an interview with the pre-generated questions

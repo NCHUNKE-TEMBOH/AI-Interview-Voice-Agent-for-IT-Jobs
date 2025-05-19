@@ -29,13 +29,17 @@ export default function Home() {
             <Link href="#pricing" className="text-sm font-medium hover:underline">
               Pricing
             </Link>
+            <Link href="/jobs" className="text-sm font-medium hover:underline">
+              Find Jobs
+            </Link>
           </nav>
-          <div>
-
+          <div className="flex gap-2">
+            <Link href={'/jobs'}>
+              <Button variant="outline">Find Jobs</Button>
+            </Link>
             <Link href={'/dashboard'}>
               <Button>Dashboard</Button>
             </Link>
-            {/* } */}
           </div>
         </div>
       </header>

@@ -107,77 +107,8 @@ function JobInterview() {
   };
 
   const [selectedMicrophoneId, setSelectedMicrophoneId] = useState(null);
-  const [simulatedQuestion, setSimulatedQuestion] = useState('');
-  const [simulatedQuestionIndex, setSimulatedQuestionIndex] = useState(0);
 
-  // Function to simulate an interview without using Vapi
-  const simulateInterview = () => {
-    console.log("Starting simulated interview experience");
-    setCallEnd(false);
-
-    // Get questions from the job
-    let interviewQuestions = [];
-    try {
-      if (job.questionlist) {
-        interviewQuestions = JSON.parse(job.questionlist);
-      }
-    } catch (error) {
-      console.error("Error parsing questionlist:", error);
-    }
-
-    // Fallback to default questions if none were found
-    if (!interviewQuestions || interviewQuestions.length === 0) {
-      interviewQuestions = [
-        "Tell me about your experience related to this role.",
-        "What skills do you have that make you a good fit for this position?",
-        "How do you handle challenging situations in the workplace?",
-        "Why are you interested in this position?",
-        "What are your strengths and weaknesses?",
-        "Describe a project you worked on that you're proud of.",
-        "How do you stay updated with industry trends?",
-        "Where do you see yourself in 5 years?",
-        "How do you handle feedback?",
-        "Do you have any questions for us?"
-      ];
-    }
-
-    // Start with introduction
-    const introduction = `Welcome to your interview for the ${job.job_title} position at ${company?.name || 'our company'}. I'll be asking you some questions to assess your fit for this role.`;
-    setSimulatedQuestion(introduction);
-
-    // Create a default conversation
-    const defaultConversation = {
-      messages: [
-        {
-          role: "assistant",
-          content: introduction
-        }
-      ]
-    };
-    setConversation(JSON.stringify(defaultConversation));
-
-    // Set up a timer to show the first question after 3 seconds
-    setTimeout(() => {
-      if (interviewQuestions.length > 0) {
-        setSimulatedQuestion(interviewQuestions[0]);
-        setSimulatedQuestionIndex(1);
-
-        // Update conversation
-        const updatedConversation = {
-          messages: [
-            ...defaultConversation.messages,
-            {
-              role: "assistant",
-              content: interviewQuestions[0]
-            }
-          ]
-        };
-        setConversation(JSON.stringify(updatedConversation));
-      }
-    }, 3000);
-  };
-
-  const startInterview = async () => {
+  const startInterview = () => {
     if (!userName || !userEmail) {
       toast.error('Please enter your name and email');
       return;
@@ -189,10 +120,10 @@ function JobInterview() {
     }
 
     setStep(2);
-    await startCall();
+    startCall();
   };
 
-  const startCall = async () => {
+  const startCall = () => {
     try {
       // Format the interview types for the AI
       const interviewTypes = job.interview_type ? job.interview_type.split(',').map(type => type.trim()).join(', ') : 'General';
@@ -302,43 +233,16 @@ At the end of the interview, thank the candidate and let them know that their re
       console.log("Using microphone device ID:", selectedMicrophoneId);
 
       try {
-        // First, get direct access to the microphone to ensure it's working
-        let stream;
-        try {
-          console.log("Directly accessing microphone before starting Vapi...");
-          const audioConstraints = selectedMicrophoneId ? {
-            deviceId: { exact: selectedMicrophoneId },
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          } : true;
+        // Configure audio constraints if we have a selected microphone
+        const audioConstraints = selectedMicrophoneId ? {
+          deviceId: { exact: selectedMicrophoneId },
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        } : true;
 
-          stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-          console.log("Successfully accessed microphone directly:", stream.getAudioTracks()[0].label);
-
-          // Stop the stream - Vapi will request it again
-          stream.getTracks().forEach(track => track.stop());
-        } catch (micError) {
-          console.error("Error directly accessing microphone:", micError);
-          toast.error(`Microphone access failed: ${micError.message}. Please check your browser settings.`);
-          // Continue anyway - Vapi will try to access the microphone itself
-        }
-
-        // Check if Vapi API key is valid
-        const apiKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
-        if (!apiKey || apiKey.includes('your_vapi_public_key') || apiKey === '16903ee7-5c1a-4ce3-8cfa-3f050b318391') {
-          console.error("Invalid or missing Vapi API key:", apiKey);
-          toast.error("Invalid Vapi API key. Please update your .env file with a valid key.");
-
-          // Create a simulated interview experience without Vapi
-          simulateInterview();
-          return;
-        }
-
-        // Start the Vapi call with default audio settings
-        // Let Vapi handle the microphone access to avoid conflicts
-        console.log("Starting Vapi with default audio settings");
-        vapi.start(assistantOptions);
+        // Start the Vapi call with the selected microphone
+        vapi.start(assistantOptions, { audio: audioConstraints });
         setCallEnd(false);
 
         // Set up event listeners
@@ -737,18 +641,6 @@ At the end of the interview, thank the candidate and let them know that their re
                       <li className="text-sm text-primary">- Speak clearly and at a normal volume</li>
                       <li className="text-sm text-primary">- Wait for the AI to finish speaking before responding</li>
                     </ul>
-                    <div className="mt-2 space-y-1">
-                      <div>
-                        <a href="/mic-test" target="_blank" className="text-sm text-blue-600 hover:underline">
-                          Having microphone issues? Try our advanced microphone test
-                        </a>
-                      </div>
-                      <div>
-                        <a href="/browser-check" target="_blank" className="text-sm text-blue-600 hover:underline">
-                          Check browser compatibility and microphone permissions
-                        </a>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
@@ -784,17 +676,6 @@ At the end of the interview, thank the candidate and let them know that their re
             </div>
           </div>
 
-          {/* Show message for simulated interview */}
-          {simulatedQuestion && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> You are in simulated interview mode because the Vapi API key is invalid or missing.
-                Please update your .env file with a valid Vapi API key to enable voice interviews.
-                In this mode, you can click "Next Question" to proceed through the interview.
-              </p>
-            </div>
-          )}
-
           <div className='grid grid-cols-1 md:grid-cols-2 gap-7 mt-5'>
             <div className='bg-white h-[400px] rounded-lg border flex relative flex-col gap-3 items-center justify-center'>
               <div className='relative'>
@@ -806,13 +687,6 @@ At the end of the interview, thank the candidate and let them know that their re
                 />
               </div>
               <h2>AI Interviewer</h2>
-
-              {/* Show simulated question if available */}
-              {simulatedQuestion && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg max-w-xs text-center">
-                  {simulatedQuestion}
-                </div>
-              )}
             </div>
 
             <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center'>
@@ -823,75 +697,6 @@ At the end of the interview, thank the candidate and let them know that their re
                 </div>
               </div>
               <h2>{userName}</h2>
-
-              {/* Show next question button for simulated interview */}
-              {simulatedQuestion && simulatedQuestionIndex > 0 && (
-                <Button
-                  className="mt-4"
-                  onClick={() => {
-                    // Get questions from the job
-                    let interviewQuestions = [];
-                    try {
-                      if (job.questionlist) {
-                        interviewQuestions = JSON.parse(job.questionlist);
-                      }
-                    } catch (error) {
-                      console.error("Error parsing questionlist:", error);
-                    }
-
-                    // Fallback to default questions if none were found
-                    if (!interviewQuestions || interviewQuestions.length === 0) {
-                      interviewQuestions = [
-                        "Tell me about your experience related to this role.",
-                        "What skills do you have that make you a good fit for this position?",
-                        "How do you handle challenging situations in the workplace?",
-                        "Why are you interested in this position?",
-                        "What are your strengths and weaknesses?",
-                        "Describe a project you worked on that you're proud of.",
-                        "How do you stay updated with industry trends?",
-                        "Where do you see yourself in 5 years?",
-                        "How do you handle feedback?",
-                        "Do you have any questions for us?"
-                      ];
-                    }
-
-                    // Check if we have more questions
-                    if (simulatedQuestionIndex < interviewQuestions.length) {
-                      // Show next question
-                      setSimulatedQuestion(interviewQuestions[simulatedQuestionIndex]);
-                      setSimulatedQuestionIndex(simulatedQuestionIndex + 1);
-
-                      // Update conversation
-                      try {
-                        const currentConversation = JSON.parse(conversation);
-                        const updatedConversation = {
-                          messages: [
-                            ...currentConversation.messages,
-                            {
-                              role: "user",
-                              content: "I've answered this question."
-                            },
-                            {
-                              role: "assistant",
-                              content: interviewQuestions[simulatedQuestionIndex]
-                            }
-                          ]
-                        };
-                        setConversation(JSON.stringify(updatedConversation));
-                      } catch (error) {
-                        console.error("Error updating conversation:", error);
-                      }
-                    } else {
-                      // End the interview
-                      setCallEnd(true);
-                      toast('Interview Ended... Please Wait...');
-                      generateFeedback();
-                    }
-                  }}
-                >
-                  Next Question
-                </Button>
-              )}
             </div>
           </div>
 

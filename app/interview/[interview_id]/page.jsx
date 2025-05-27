@@ -71,7 +71,7 @@ function Interview() {
             <div className='flex flex-col items-center
              justify-center border rounded-lg bg-white
              p-7 lg:px-33 xl:px-52  mb-20 pb-15'>
-                <Image src={'/logo.png'} alt='logo' width={200} height={100}
+                <Image src={'/logo2.png'} alt='logo' width={200} height={100}
                     className='w-[140px]'
                 />
                 <h2 className='mt-3'>AI-Powered Interview Platform</h2>

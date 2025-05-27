@@ -156,7 +156,7 @@ function CompanyOnboardingForm({ company, onComplete }) {
       <Card className="w-full max-w-3xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
-            <Image src={'/logo.png'} alt="logo" width={180} height={60} />
+            <Image src={'/logo2.png'} alt="logo" width={180} height={60} />
           </div>
           <CardTitle className="text-2xl">Company Onboarding</CardTitle>
           <CardDescription>

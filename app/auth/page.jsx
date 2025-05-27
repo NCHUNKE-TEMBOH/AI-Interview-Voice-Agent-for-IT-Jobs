@@ -84,9 +84,9 @@ function Login() {
     return (
         <div className='flex flex-col items-center justify-center h-screen'>
             <div className='flex flex-col items-center border rounded-2xl p-8 w-full max-w-md'>
-                <Image src={'/logo.png'} alt='logo'
-                    width={400}
-                    height={100}
+                <Image src={'/logo2.png'} alt='logo'
+                    width={300}
+                    height={80}
                     className='w-[180px]'
                 />
                 <div className='flex items-center flex-col w-full'>
@@ -95,7 +95,7 @@ function Login() {
                         height={400}
                         className='w-[400px] h-[250px] rounded-2xl'
                     />
-                    <h2 className='text-2xl font-bold text-center mt-5'>Welcome to AiCruiter</h2>
+                    <h2 className='text-2xl font-bold text-center mt-5'>Welcome to Skillin</h2>
                     <p className='text-gray-500 text-center mb-4'>Sign in to continue</p>
 
                     <div className="w-full mb-4">

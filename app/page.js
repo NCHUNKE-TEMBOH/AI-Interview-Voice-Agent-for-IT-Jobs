@@ -17,7 +17,7 @@ export default function Home() {
       <header className="border-b w-full">
         <div className=" px-10 flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src={'/logo.png'} alt="logo" width={140} height={200} />
+            <Image src={'/logo2.png'} alt="logo" width={140} height={200} />
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="#features" className="text-sm font-medium hover:underline">
@@ -29,13 +29,17 @@ export default function Home() {
             <Link href="#pricing" className="text-sm font-medium hover:underline">
               Pricing
             </Link>
+            <Link href="/jobs" className="text-sm font-medium hover:underline">
+              Find Jobs
+            </Link>
           </nav>
-          <div>
-
+          <div className="flex gap-2">
+            <Link href={'/jobs'}>
+              <Button variant="outline">Find Jobs</Button>
+            </Link>
             <Link href={'/dashboard'}>
               <Button>Dashboard</Button>
             </Link>
-            {/* } */}
           </div>
         </div>
       </header>

@@ -68,19 +68,11 @@ export default function Home() {
                   </Button>
                 </div>
               </div>
-              <div className="mx-auto lg:mx-0 relative">
-                <div className="relative h-[350px] w-full overflow-hidden rounded-xl bg-gray-100 shadow-lg">
-                  <div className="relative">
-                    <HeroVideoDialog
-                      className="block dark:hidden"
-                      thumbnailSrc="/image.png"
-                      thumbnailAlt="Hero Video"
-                    />
-                    <HeroVideoDialog
-                      className="hidden dark:block"
-                      thumbnailSrc="/image.png"
-                      thumbnailAlt="Hero Video"
-                    />
+              <div className=" relative">
+                <div className="relative h-[350px] w-full">
+                  <div className="">
+                    <Image src={'/here.png'} alt="logo" width={440} height={200} />
+                    
                   </div>
                 </div>
               </div>

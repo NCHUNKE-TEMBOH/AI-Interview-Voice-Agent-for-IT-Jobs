@@ -48,7 +48,7 @@ function CompanyProfile() {
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            [field]: value || ''
         }));
     };
 
@@ -58,7 +58,7 @@ function CompanyProfile() {
             return;
         }
 
-        if (!formData.name.trim()) {
+        if (!formData.name || !formData.name.trim()) {
             toast.error('Company name is required');
             return;
         }
@@ -68,14 +68,14 @@ function CompanyProfile() {
             const { data, error } = await supabase
                 .from('Companies')
                 .update({
-                    name: formData.name.trim(),
-                    industry_type: formData.industry_type,
-                    company_size: formData.company_size,
-                    website: formData.website.trim(),
-                    description: formData.description.trim(),
-                    location: formData.location.trim(),
-                    phone: formData.phone.trim(),
-                    picture: formData.picture.trim(),
+                    name: (formData.name || '').trim(),
+                    industry_type: formData.industry_type || '',
+                    company_size: formData.company_size || '',
+                    website: (formData.website || '').trim(),
+                    description: (formData.description || '').trim(),
+                    location: (formData.location || '').trim(),
+                    phone: (formData.phone || '').trim(),
+                    picture: (formData.picture || '').trim(),
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', company.id)

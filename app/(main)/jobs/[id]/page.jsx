@@ -59,6 +59,33 @@ function JobDetailPage() {
             return;
         }
 
+        // Check if user has credits for job application
+        try {
+            const { data: canApply, error: creditError } = await supabase
+                .rpc('can_apply_for_job', { user_id: user.id });
+
+            if (creditError) {
+                console.error('Error checking credits:', creditError);
+                console.error('Full credit error:', JSON.stringify(creditError, null, 2));
+
+                // If function doesn't exist, continue without credit check
+                if (creditError.code === '42883') {
+                    console.log('Credit function not available, proceeding with application');
+                } else {
+                    toast.error('Error checking application permissions');
+                    return;
+                }
+            } else if (!canApply) {
+                toast.error('Insufficient credits for job application. Please purchase more credits to continue.');
+                router.push('/billing');
+                return;
+            }
+        } catch (error) {
+            console.error('Exception checking credits:', error);
+            // Continue without credit check if there's an error
+            console.log('Proceeding with application despite credit check error');
+        }
+
         try {
             setApplying(true);
 
@@ -161,12 +188,45 @@ function JobDetailPage() {
 
             console.log("Interview created:", interview);
 
-            // Step 3: Create a job submission record
+            // Step 3: Deduct credits for job application
+            try {
+                const { data: creditDeducted, error: creditDeductionError } = await supabase
+                    .rpc('deduct_credits_for_application', {
+                        user_id: user.id,
+                        job_id: job.id
+                    });
+
+                if (creditDeductionError) {
+                    console.error("Error deducting credits:", creditDeductionError);
+                    console.error("Full credit deduction error:", JSON.stringify(creditDeductionError, null, 2));
+
+                    // If function doesn't exist, continue without credit deduction
+                    if (creditDeductionError.code === '42883') {
+                        console.log('Credit deduction function not available, proceeding with application');
+                    } else {
+                        toast.error("Failed to process credit deduction");
+                        setApplying(false);
+                        return;
+                    }
+                } else if (!creditDeducted) {
+                    toast.error("Unable to process application. You may have already applied for this job or have insufficient credits.");
+                    setApplying(false);
+                    return;
+                }
+            } catch (error) {
+                console.error("Exception deducting credits:", error);
+                // Continue without credit deduction if there's an error
+                console.log('Proceeding with application despite credit deduction error');
+            }
+
+            // Step 4: Create a job submission record
             const submissionData = {
                 job_id: job.id,
+                user_id: user.id,
                 user_name: user.name || 'Candidate',
                 user_email: user.email,
-                status: 'pending'
+                application_status: 'pending',
+                interview_completed: false
             };
 
             console.log("Creating job submission with data:", submissionData);

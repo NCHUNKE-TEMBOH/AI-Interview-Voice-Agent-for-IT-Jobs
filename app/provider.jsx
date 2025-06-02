@@ -65,16 +65,31 @@ function Provider({ children }) {
                         console.log("Checking for company account with email:", user.email);
 
                         try {
-                            // Check if company exists
+                            // Check if company exists - handle multiple rows case
                             const { data: companyData, error } = await supabase
                                 .from('Companies')
                                 .select('*')
                                 .eq('email', user.email)
-                                .maybeSingle();
+                                .limit(1);
 
                             if (error) {
                                 console.error("Error fetching company:", error);
-                                // Continue with company creation instead of returning
+                                console.error("Full error details:", JSON.stringify(error, null, 2));
+
+                                // If table doesn't exist (42P01) or permission denied (42501), set temp company
+                                if (error.code === '42P01' || error.code === '42501') {
+                                    console.log("Companies table not accessible, setting temporary company");
+                                    setCompany({
+                                        id: 'temp-id',
+                                        email: user.email,
+                                        name: user.user_metadata?.name || 'Company Account',
+                                        is_onboarded: false,
+                                        industry_type: 'Technology'
+                                    });
+                                    return;
+                                }
+
+                                // Continue with company creation for other errors
                                 console.log("Will attempt to create company despite fetch error");
 
                                 // Create a new company record if fetch failed
@@ -111,9 +126,9 @@ function Provider({ children }) {
                                 return;
                             }
 
-                            if (companyData) {
-                                console.log("Found existing company:", companyData);
-                                setCompany(companyData);
+                            if (companyData && companyData.length > 0) {
+                                console.log("Found existing company:", companyData[0]);
+                                setCompany(companyData[0]);
                             } else {
                                 console.log("No company found, creating new company for:", user.email);
                                 // Create a new company record if it doesn't exist

@@ -24,11 +24,6 @@ export function AppSidebar() {
     // Use the appropriate sidebar options based on user type
     const sidebarOptions = isCompany ? CompanySideBarOptions : SideBarOptions;
 
-    // Determine the create button link and text based on user type
-    const createButtonLink = isCompany ? '/company/create-job' : '/dashboard/create-interview';
-    const createButtonText = isCompany ? 'Create New Job' : 'Create New Interview';
-    const createButtonIcon = isCompany ? <BriefcaseBusiness size={16} /> : <Plus size={16} />;
-
     return (
         <Sidebar>
             <SidebarHeader className='flex items-center mt-5'>
@@ -36,11 +31,14 @@ export function AppSidebar() {
                     height={100}
                     className="w-[150px]"
                 />
-                <Link href={createButtonLink}>
-                    <Button className='w-full mt-5'>
-                        {createButtonIcon} {createButtonText}
-                    </Button>
-                </Link>
+                {/* Only show create button for companies */}
+                {isCompany && (
+                    <Link href="/company/create-job">
+                        <Button className='w-full mt-5'>
+                            <BriefcaseBusiness size={16} /> Create New Job
+                        </Button>
+                    </Link>
+                )}
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>

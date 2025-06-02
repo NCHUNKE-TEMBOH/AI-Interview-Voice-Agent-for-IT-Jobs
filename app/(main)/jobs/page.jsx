@@ -22,23 +22,102 @@ function JobsPage() {
     const fetchJobs = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
+
+            // First, try to fetch jobs with company relationship
+            let { data, error } = await supabase
                 .from('Jobs')
                 .select(`
                     *,
-                    Companies(name, picture, industry_type)
+                    Companies!Jobs_company_id_fkey(name, picture, industry_type)
                 `)
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error("Error fetching jobs:", error);
-                setJobs([]);
-            } else {
-                console.log("Fetched jobs:", data);
-                setJobs(data || []);
+            // If foreign key relationship fails, try the other foreign key name
+            if (error && (error.code === 'PGRST200' || error.code === 'PGRST201')) {
+                console.log("Trying alternative foreign key relationship...");
+
+                const { data: altData, error: altError } = await supabase
+                    .from('Jobs')
+                    .select(`
+                        *,
+                        Companies!jobs_company_id_fkey(name, picture, industry_type)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (!altError) {
+                    data = altData;
+                    error = null;
+                } else {
+                    console.log("Alternative foreign key also failed, fetching separately...");
+                }
             }
+
+            // If both foreign key relationships fail, fetch jobs and companies separately
+            if (error && (error.code === 'PGRST200' || error.code === 'PGRST201')) {
+
+                // Fetch jobs without company relationship
+                const { data: jobsData, error: jobsError } = await supabase
+                    .from('Jobs')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (jobsError) {
+                    console.error("Error fetching jobs:", jobsError);
+                    console.error("Full error details:", JSON.stringify(jobsError, null, 2));
+                    setJobs([]);
+                    return;
+                }
+
+                if (!jobsData || jobsData.length === 0) {
+                    setJobs([]);
+                    return;
+                }
+
+                // Fetch company details for each job
+                const jobsWithCompanies = await Promise.all(
+                    jobsData.map(async (job) => {
+                        try {
+                            const { data: company, error: companyError } = await supabase
+                                .from('Companies')
+                                .select('name, picture, industry_type')
+                                .eq('id', job.company_id)
+                                .single();
+
+                            if (companyError) {
+                                console.error(`Error fetching company for job ${job.id}:`, companyError);
+                                return {
+                                    ...job,
+                                    Companies: null
+                                };
+                            }
+
+                            return {
+                                ...job,
+                                Companies: company
+                            };
+                        } catch (error) {
+                            console.error(`Exception fetching company for job ${job.id}:`, error);
+                            return {
+                                ...job,
+                                Companies: null
+                            };
+                        }
+                    })
+                );
+
+                data = jobsWithCompanies;
+            } else if (error) {
+                console.error("Error fetching jobs:", error);
+                console.error("Full error details:", JSON.stringify(error, null, 2));
+                setJobs([]);
+                return;
+            }
+
+            console.log("Fetched jobs:", data);
+            setJobs(data || []);
         } catch (error) {
             console.error("Exception fetching jobs:", error);
+            console.error("Full exception details:", JSON.stringify(error, null, 2));
             setJobs([]);
         } finally {
             setLoading(false);

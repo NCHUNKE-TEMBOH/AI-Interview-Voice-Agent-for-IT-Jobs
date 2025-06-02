@@ -2,7 +2,7 @@
 import { useUser } from '@/app/provider';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/services/supabaseClient';
-import { Camera, Video } from 'lucide-react';
+import { Camera, Video, FileText } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 import InterviewCard from './InterviewCard';
 import { toast } from 'sonner';
@@ -44,28 +44,22 @@ function LatestInterviewsList() {
 
     return (
         <div className='my-5'>
-            <h2 className='font-bold text-2xl'>Previously Created Interviews</h2>
+            <h2 className='font-bold text-2xl'>Quick Actions</h2>
 
-            {/* Always show the create interview button */}
-            <div className='p-5 flex flex-col gap-3 items-center bg-white rounded-xl mt-5'>
-                <Video className='h-10 w-10 text-primary' />
-                <h2>{interviewList?.length === 0 ? "You don't have any interviews created!" : "Create a new interview"}</h2>
-                <Link href={'/dashboard/create-interview'}>
-                    <Button>+ Create New Interview</Button>
+            {/* Show application-focused actions */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-5 mt-5'>
+                <Link href={'/dashboard/applications'} className='bg-white border border-gray-200 rounded-lg p-5 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'>
+                    <FileText className='p-3 text-primary bg-blue-50 rounded-lg h-12 w-12' />
+                    <h2 className='font-bold'>My Applications</h2>
+                    <p className='text-gray-500'>Track your job applications and interview status</p>
+                </Link>
+
+                <Link href={'/billing'} className='bg-white border border-gray-200 rounded-lg p-5 flex flex-col gap-2 cursor-pointer hover:shadow-md transition-shadow'>
+                    <Camera className='p-3 text-primary bg-blue-50 rounded-lg h-12 w-12' />
+                    <h2 className='font-bold'>Manage Credits</h2>
+                    <p className='text-gray-500'>View your credits and purchase more for job applications</p>
                 </Link>
             </div>
-
-            {/* Show interviews if available */}
-            {interviewList && interviewList.length > 0 && (
-                <div className='mt-5'>
-                    <h3 className='font-bold text-xl mb-3'>Your Recent Interviews</h3>
-                    <div className='grid grid-cols-2 xl:grid-cols-3 gap-5'>
-                        {interviewList.map((interview, index) => (
-                            <InterviewCard interview={interview} key={index} />
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

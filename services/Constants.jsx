@@ -10,6 +10,7 @@ import {
     List,
     Puzzle,
     Settings,
+    User,
     User2Icon,
     Users,
     WalletCards
@@ -27,14 +28,14 @@ export const SideBarOptions = [
         path: '/jobs'
     },
     {
-        name: 'Scheduled Interview',
-        icon: Calendar,
-        path: '/scheduled-interview'
+        name: 'My Applications',
+        icon: FileText,
+        path: '/dashboard/applications'
     },
     {
-        name: 'All Interview',
-        icon: List,
-        path: '/all-interview'
+        name: 'My Profile',
+        icon: User,
+        path: '/dashboard/profile'
     },
     {
         name: 'Billing',

@@ -5,12 +5,14 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { supabase } from '@/services/supabaseClient'
-import { Building2, Mail, User } from 'lucide-react'
+import { Building2, Mail, User, UserCheck } from 'lucide-react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
 function Login() {
+    const router = useRouter()
     const [userType, setUserType] = useState("client")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
@@ -37,6 +39,19 @@ function Login() {
             console.error('Exception:', error)
             toast.error('Google login failed. Please try email login instead.')
         }
+    }
+
+    /**
+     * Continue as guest (for interview practice)
+     */
+    const continueAsGuest = () => {
+        // Set guest mode in localStorage
+        localStorage.setItem('userType', 'guest')
+        localStorage.setItem('guestMode', 'true')
+
+        // Redirect to guest dashboard
+        router.push('/guest')
+        toast.success('Welcome! You can now practice interviews as a guest.')
     }
 
     /**
@@ -82,7 +97,19 @@ function Login() {
     }
 
     return (
-        <div className='flex flex-col items-center justify-center h-screen'>
+        <div className='flex flex-col items-center justify-center h-screen relative'>
+            {/* Guest Button - Top Right */}
+            <div className="absolute top-4 right-4">
+                <Button
+                    variant="outline"
+                    onClick={continueAsGuest}
+                    className="flex items-center gap-2"
+                >
+                    <UserCheck className="h-4 w-4" />
+                    Continue as Guest
+                </Button>
+            </div>
+
             <div className='flex flex-col items-center border rounded-2xl p-8 w-full max-w-md'>
                 <Image src={'/logo2.png'} alt='logo'
                     width={300}

@@ -168,10 +168,19 @@ function JobInterview() {
           provider: "deepgram",
           model: "nova-2",
           language: "en-US",
-          // Increase sensitivity to detect quieter speech
+          // Enhanced settings for better voice detection
           options: {
-            sensitivity: 0.7,
-            vad_turnoff: 500  // Increase voice activity detection timeout
+            sensitivity: 0.8,
+            vad_turnoff: 300,
+            interim_results: true,
+            punctuate: true,
+            smart_format: true,
+            profanity_filter: false,
+            redact: false,
+            diarize: false,
+            multichannel: false,
+            alternatives: 1,
+            numerals: true
           }
         },
         voice: {
@@ -233,13 +242,23 @@ At the end of the interview, thank the candidate and let them know that their re
       console.log("Using microphone device ID:", selectedMicrophoneId);
 
       try {
-        // Configure audio constraints if we have a selected microphone
+        // Configure audio constraints with Google Meet-like quality settings
         const audioConstraints = selectedMicrophoneId ? {
           deviceId: { exact: selectedMicrophoneId },
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        } : true;
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100,
+          channelCount: 1,
+          volume: 1.0
+        } : {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100,
+          channelCount: 1,
+          volume: 1.0
+        };
 
         // Start the Vapi call with the selected microphone
         vapi.start(assistantOptions, { audio: audioConstraints });

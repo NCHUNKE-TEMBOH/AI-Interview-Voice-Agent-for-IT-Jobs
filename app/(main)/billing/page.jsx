@@ -177,11 +177,11 @@ function Billing() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-2xl font-bold">$9.99</div>
-                                        <p className="text-sm text-muted-foreground">10 credits</p>
+                                        <p className="text-sm text-muted-foreground">5 credits</p>
                                         <ul className="mt-4 grid gap-2 text-sm">
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                                <span>10 job applications</span>
+                                                <span>5 job applications</span>
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
@@ -198,7 +198,7 @@ function Billing() {
                                         </ul>
                                     </CardContent>
                                     <CardFooter>
-                                        <PayButton amount={9.99} credits={10} />
+                                        <PayButton amount={9.99} credits={5} />
                                     </CardFooter>
                                 </Card>
                                 <Card className="border-blue-200 bg-blue-50/50">
@@ -207,11 +207,11 @@ function Billing() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-2xl font-bold">$19.99</div>
-                                        <p className="text-sm text-muted-foreground">25 credits</p>
+                                        <p className="text-sm text-muted-foreground">15 credits</p>
                                         <ul className="mt-4 grid gap-2 text-sm">
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                                <span>25 job applications</span>
+                                                <span>15 job applications</span>
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
@@ -232,7 +232,7 @@ function Billing() {
                                         </ul>
                                     </CardContent>
                                     <CardFooter>
-                                        <PayButton amount={19.99} credits={25} />
+                                        <PayButton amount={19.99} credits={15} />
                                     </CardFooter>
                                 </Card>
                                 <Card>
@@ -241,11 +241,11 @@ function Billing() {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-2xl font-bold">$34.99</div>
-                                        <p className="text-sm text-muted-foreground">50 credits</p>
+                                        <p className="text-sm text-muted-foreground">30 credits</p>
                                         <ul className="mt-4 grid gap-2 text-sm">
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                                                <span>50 job applications</span>
+                                                <span>30 job applications</span>
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
@@ -270,7 +270,7 @@ function Billing() {
                                         </ul>
                                     </CardContent>
                                     <CardFooter>
-                                        <PayButton amount={34.99} credits={50} />
+                                        <PayButton amount={34.99} credits={30} />
                                     </CardFooter>
                                 </Card>
                             </div>

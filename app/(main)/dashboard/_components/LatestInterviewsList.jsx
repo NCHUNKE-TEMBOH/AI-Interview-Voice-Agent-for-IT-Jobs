@@ -9,36 +9,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 function LatestInterviewsList() {
-    const [interviewList, setInterviewList] = useState([]);
-    const { user } = useUser();
-
-    useEffect(() => {
-        user && GetInterviewList();
-    }, [user])
-
-    const GetInterviewList = async () => {
-        try {
-            let { data: Interviews, error } = await supabase
-                .from('Interviews')
-                .select('*')
-                .eq('userEmail', user?.email)
-                .order('id', { ascending: false })
-                .limit(6);
-
-            if (error) {
-                console.error("Error fetching interviews:", error);
-                // Set to empty array instead of null to prevent UI issues
-                setInterviewList([]);
-                return;
-            }
-
-            console.log("Fetched interviews:", Interviews);
-            setInterviewList(Interviews || []);
-        } catch (error) {
-            console.error("Exception fetching interviews:", error);
-            setInterviewList([]);
-        }
-    }
+    // No longer fetching interviews since users don't create them anymore
 
 
 

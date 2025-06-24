@@ -43,13 +43,39 @@ export default function CVScreening({ user, company, job, onScreeningComplete })
             experience_relevance: screeningData.experienceRelevance,
             education_match: screeningData.educationMatch,
             screening_data: screeningData,
-            screened_by: company.id
+            screened_by: company.id,
+            created_at: new Date().toISOString()
           }
         ])
         .select();
 
       if (error) {
         console.error('Error saving screening result:', error);
+        console.error('Full error details:', JSON.stringify(error, null, 2));
+
+        // If table doesn't exist, continue without saving but show result
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.log('CV_Screening_Results table does not exist, showing result without saving');
+          setScreeningResult({
+            id: Date.now(),
+            match_score: screeningData.matchScore,
+            summary: screeningData.summary,
+            skills_match: screeningData.skillsMatch,
+            experience_relevance: screeningData.experienceRelevance,
+            education_match: screeningData.educationMatch,
+            screening_data: screeningData
+          });
+          toast.success('CV screening completed! (Note: Results not saved to database)');
+
+          if (onScreeningComplete) {
+            onScreeningComplete({
+              match_score: screeningData.matchScore,
+              summary: screeningData.summary
+            });
+          }
+          return;
+        }
+
         toast.error(`Failed to save screening result: ${error.message}`);
         return;
       }

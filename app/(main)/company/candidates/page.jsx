@@ -28,11 +28,11 @@ function CandidatesPage() {
         setLoading(true);
         try {
             // First, get all job submissions for this company's jobs
-            const { data: submissions, error: submissionsError } = await supabase
+            let { data: submissions, error: submissionsError } = await supabase
                 .from('Job_Submissions')
                 .select(`
                     *,
-                    Jobs!inner (
+                    Jobs!Job_Submissions_job_id_fkey (
                         id,
                         job_title,
                         company_id
@@ -41,9 +41,32 @@ function CandidatesPage() {
                 .eq('Jobs.company_id', company.id)
                 .order('created_at', { ascending: false });
 
+            // If specific foreign key fails, try alternative
+            if (submissionsError && (submissionsError.code === 'PGRST200' || submissionsError.code === 'PGRST201')) {
+                console.log('Trying alternative foreign key...');
+                const { data: altData, error: altError } = await supabase
+                    .from('Job_Submissions')
+                    .select(`
+                        *,
+                        Jobs!job_submissions_job_id_fkey (
+                            id,
+                            job_title,
+                            company_id
+                        )
+                    `)
+                    .eq('Jobs.company_id', company.id)
+                    .order('created_at', { ascending: false });
+
+                if (!altError) {
+                    submissions = altData;
+                    submissionsError = null;
+                }
+            }
+
             if (submissionsError) {
                 console.error('Error fetching submissions:', submissionsError);
-                
+                console.error('Full error details:', JSON.stringify(submissionsError, null, 2));
+
                 // Fallback: fetch submissions and jobs separately
                 const { data: allSubmissions, error: fallbackError } = await supabase
                     .from('Job_Submissions')
@@ -52,7 +75,8 @@ function CandidatesPage() {
 
                 if (fallbackError) {
                     console.error('Fallback error:', fallbackError);
-                    toast.error('Failed to load candidates');
+                    console.error('Full fallback error details:', JSON.stringify(fallbackError, null, 2));
+                    toast.error(`Failed to load candidates: ${fallbackError.message || 'Database error'}`);
                     return;
                 }
 
@@ -83,7 +107,47 @@ function CandidatesPage() {
             await enrichCandidatesWithUserData(submissions || []);
         } catch (error) {
             console.error('Exception fetching candidates:', error);
-            toast.error('Failed to load candidates');
+            console.error('Full exception details:', JSON.stringify(error, null, 2));
+
+            // Final fallback: try using the view if it exists
+            try {
+                console.log('Attempting final fallback using Company_Candidates_View...');
+                const { data: viewData, error: viewError } = await supabase
+                    .from('Company_Candidates_View')
+                    .select('*')
+                    .eq('company_id', company.id)
+                    .order('created_at', { ascending: false });
+
+                if (!viewError && viewData) {
+                    console.log('Successfully loaded candidates from view:', viewData.length);
+                    const formattedData = viewData.map(item => ({
+                        ...item,
+                        user: {
+                            id: item.user_id,
+                            name: item.user_name || 'Unknown Candidate',
+                            email: item.user_email || 'No email',
+                            cv_url: item.cv_url,
+                            cv_filename: item.cv_filename,
+                            cv_uploaded_at: item.cv_uploaded_at
+                        },
+                        Jobs: {
+                            id: item.job_id,
+                            job_title: item.job_title
+                        },
+                        cv_screened: !!item.match_score,
+                        screening_result: item.match_score ? {
+                            match_score: item.match_score,
+                            summary: item.screening_summary
+                        } : null
+                    }));
+                    setCandidates(formattedData);
+                    return;
+                }
+            } catch (viewError) {
+                console.error('View fallback also failed:', viewError);
+            }
+
+            toast.error(`Failed to load candidates: ${error.message || 'Database connection error'}`);
         } finally {
             setLoading(false);
         }

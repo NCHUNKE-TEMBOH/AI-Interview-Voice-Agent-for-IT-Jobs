@@ -33,12 +33,12 @@ function CompanyProfile() {
         if (company) {
             setFormData({
                 name: company.name || '',
-                company_email: company.email || '',
+                email: company.email || '',
                 industry_type: company.industry_type || '',
                 company_size: company.company_size || '',
                 website: company.website || '',
                 description: company.description || '',
-                address: company.location || '',
+                location: company.location || '',
                 phone: company.phone || '',
                 picture: company.picture || ''
             });

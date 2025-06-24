@@ -15,7 +15,7 @@ function InterviewLink({ interview_id, formData }) {
         return process.env.NEXT_PUBLIC_HOST_URL || 'http://localhost:3000';
     };
 
-    const url = `${getBaseUrl()}/${interview_id}`;
+    const url = `${getBaseUrl()}/interview/${interview_id}`;
 
     const GetInterviewUrl = () => {
         return url;

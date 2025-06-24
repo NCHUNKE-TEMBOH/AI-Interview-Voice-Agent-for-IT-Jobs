@@ -129,6 +129,14 @@ function Provider({ children }) {
                             if (companyData && companyData.length > 0) {
                                 console.log("Found existing company:", companyData[0]);
                                 setCompany(companyData[0]);
+
+                                // Auto-redirect to company dashboard if not already there
+                                if (typeof window !== 'undefined' &&
+                                    !window.location.pathname.includes('/company') &&
+                                    !window.location.pathname.includes('/auth')) {
+                                    console.log("Redirecting to company dashboard...");
+                                    window.location.href = '/company/dashboard';
+                                }
                             } else {
                                 console.log("No company found, creating new company for:", user.email);
                                 // Create a new company record if it doesn't exist
@@ -148,6 +156,7 @@ function Provider({ children }) {
 
                                 if (insertError) {
                                     console.error("Error creating company:", insertError);
+                                    console.error("Full insert error details:", JSON.stringify(insertError, null, 2));
                                     // Set a minimal company object to prevent null references
                                     setCompany({
                                         id: 'temp-id',
@@ -161,6 +170,16 @@ function Provider({ children }) {
                                 if (newCompany && newCompany.length > 0) {
                                     console.log("New company created:", newCompany[0]);
                                     setCompany(newCompany[0]);
+
+                                    // Auto-redirect to company dashboard for new company
+                                    if (typeof window !== 'undefined' &&
+                                        !window.location.pathname.includes('/company') &&
+                                        !window.location.pathname.includes('/auth')) {
+                                        console.log("Redirecting new company to dashboard...");
+                                        setTimeout(() => {
+                                            window.location.href = '/company/dashboard';
+                                        }, 1000); // Small delay to ensure state is set
+                                    }
                                 } else {
                                     console.error("No company data returned after insert");
                                     // Set a minimal company object to prevent null references
@@ -204,6 +223,15 @@ function Provider({ children }) {
                         if (userData) {
                             console.log("Found existing user:", userData);
                             setUser(userData);
+
+                            // Auto-redirect to user dashboard if not already there
+                            if (typeof window !== 'undefined' &&
+                                !window.location.pathname.includes('/dashboard') &&
+                                !window.location.pathname.includes('/auth') &&
+                                !window.location.pathname.includes('/jobs')) {
+                                console.log("Redirecting to user dashboard...");
+                                window.location.href = '/dashboard';
+                            }
                         } else {
                             console.log("Creating new user for:", user.email);
                             // Create a new user record if it doesn't exist
@@ -227,6 +255,16 @@ function Provider({ children }) {
                             if (newUser && newUser.length > 0) {
                                 console.log("New user created:", newUser[0]);
                                 setUser(newUser[0]);
+
+                                // Auto-redirect to user dashboard for new user
+                                if (typeof window !== 'undefined' &&
+                                    !window.location.pathname.includes('/dashboard') &&
+                                    !window.location.pathname.includes('/auth')) {
+                                    console.log("Redirecting new user to dashboard...");
+                                    setTimeout(() => {
+                                        window.location.href = '/dashboard';
+                                    }, 1000); // Small delay to ensure state is set
+                                }
                             }
                         }
                     }

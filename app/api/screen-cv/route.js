@@ -26,7 +26,46 @@ export async function POST(request) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Create the prompt for CV analysis
+    // Step 1: First check if this is actually a CV/Resume
+    const relevanceCheck = await checkCVRelevance(model, cvText);
+
+    if (!relevanceCheck.isRelevantCV) {
+      console.log('Document is not a relevant CV:', relevanceCheck.reason);
+      return NextResponse.json({
+        matchScore: 1,
+        summary: `Document analysis: ${relevanceCheck.reason}. This does not appear to be a professional CV/resume suitable for job application screening.`,
+        skillsMatch: 'Unable to assess skills - document does not contain typical CV content with professional skills and experience.',
+        experienceRelevance: 'Unable to evaluate experience - document lacks standard CV format with work history and career progression.',
+        educationMatch: 'Unable to assess education - document does not contain educational background information typically found in CVs.',
+        detailedAnalysis: {
+          strengths: ['Document uploaded successfully'],
+          weaknesses: [
+            'Not a standard CV/resume format',
+            'Missing professional experience section',
+            'Lacks skills and qualifications information',
+            'Does not follow CV conventions'
+          ],
+          recommendations: [
+            'Request candidate to submit a proper CV/resume',
+            'Provide CV format guidelines to candidate',
+            'Schedule call to clarify application materials'
+          ]
+        },
+        keyFindings: {
+          yearsOfExperience: 'Not applicable - not a CV',
+          primarySkills: ['Document type: ' + relevanceCheck.documentType],
+          industryBackground: 'Cannot determine from document',
+          educationLevel: 'Not specified in document',
+          certifications: ['Not a CV format']
+        },
+        documentType: relevanceCheck.documentType,
+        isRelevantCV: false
+      });
+    }
+
+    console.log('Document confirmed as relevant CV, proceeding with detailed analysis...');
+
+    // Step 2: Proceed with detailed CV analysis
     const prompt = `
 You are an expert HR professional and recruiter with 15+ years of experience. Analyze the following CV against the specific job requirements and provide a detailed, actionable assessment.
 
@@ -204,4 +243,80 @@ function validateAnalysisResult(result, jobTitle) {
       certifications: result.keyFindings?.certifications || ['Verification required']
     }
   };
+}
+
+// Function to check if document is actually a CV/Resume
+async function checkCVRelevance(model, documentText) {
+  try {
+    const relevancePrompt = `
+You are a document classifier. Analyze the following document and determine if it is a professional CV/Resume suitable for job application screening.
+
+DOCUMENT CONTENT:
+${documentText}
+
+Analyze the document and respond with this EXACT JSON format:
+{
+  "isRelevantCV": [true/false],
+  "documentType": "[CV/Resume/Cover Letter/Random Document/Academic Paper/etc.]",
+  "reason": "[brief explanation of why this is or isn't a CV]",
+  "confidence": [0-100]
+}
+
+CRITERIA FOR RELEVANT CV:
+✅ Contains personal/contact information
+✅ Has work experience or employment history
+✅ Lists skills, qualifications, or competencies
+✅ Includes education background
+✅ Follows CV/resume format conventions
+✅ Appears to be for job application purposes
+
+CRITERIA FOR NON-RELEVANT DOCUMENT:
+❌ Just a cover letter without CV content
+❌ Academic paper or research document
+❌ Random text or unrelated content
+❌ Incomplete or corrupted document
+❌ Non-professional document
+❌ Missing key CV components (no experience, skills, etc.)
+
+Be strict in your assessment. Only classify as relevant CV if it contains substantial professional information suitable for job screening.
+`;
+
+    const result = await model.generateContent(relevancePrompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    // Try to parse JSON response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        isRelevantCV: parsed.isRelevantCV || false,
+        documentType: parsed.documentType || 'Unknown Document',
+        reason: parsed.reason || 'Unable to determine document relevance',
+        confidence: parsed.confidence || 50
+      };
+    }
+
+    // Fallback if JSON parsing fails
+    const isCV = responseText.toLowerCase().includes('cv') ||
+                 responseText.toLowerCase().includes('resume') ||
+                 responseText.toLowerCase().includes('relevant');
+
+    return {
+      isRelevantCV: isCV,
+      documentType: isCV ? 'CV/Resume' : 'Unknown Document',
+      reason: isCV ? 'Document appears to be a CV/resume' : 'Document does not appear to be a professional CV',
+      confidence: 60
+    };
+
+  } catch (error) {
+    console.error('Error checking CV relevance:', error);
+    // Default to treating as CV if check fails
+    return {
+      isRelevantCV: true,
+      documentType: 'Document (verification failed)',
+      reason: 'Unable to verify document type, proceeding with analysis',
+      confidence: 50
+    };
+  }
 }

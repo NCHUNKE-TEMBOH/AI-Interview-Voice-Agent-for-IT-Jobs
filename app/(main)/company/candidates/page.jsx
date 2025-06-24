@@ -27,41 +27,84 @@ function CandidatesPage() {
     const fetchCandidates = async () => {
         setLoading(true);
         try {
-            // First, get all job submissions for this company's jobs
-            let { data: submissions, error: submissionsError } = await supabase
+            console.log('[CANDIDATES] Starting to fetch candidates for company:', company.id);
+
+            // Strategy 1: Try using the view first (if it exists)
+            try {
+                console.log('[CANDIDATES] Attempting to use Company_Candidates_View...');
+                const { data: viewData, error: viewError } = await supabase
+                    .from('Company_Candidates_View')
+                    .select('*')
+                    .eq('company_id', company.id)
+                    .order('submission_created_at', { ascending: false });
+
+                if (!viewError && viewData && viewData.length > 0) {
+                    console.log('[CANDIDATES] Successfully loaded from view:', viewData.length, 'records');
+                    const formattedData = viewData.map(item => ({
+                        ...item,
+                        user: {
+                            id: item.user_id,
+                            name: item.user_name || 'Unknown Candidate',
+                            email: item.user_email || 'No email',
+                            cv_url: item.cv_url,
+                            cv_filename: item.cv_filename,
+                            cv_uploaded_at: item.cv_uploaded_at
+                        },
+                        Jobs: {
+                            id: item.job_id,
+                            job_title: item.job_title
+                        },
+                        cv_screened: !!item.match_score,
+                        screening_result: item.match_score ? {
+                            match_score: item.match_score,
+                            summary: item.screening_summary
+                        } : null
+                    }));
+                    setCandidates(formattedData);
+                    return;
+                }
+                console.log('[CANDIDATES] View query failed or returned no data:', viewError?.message);
+            } catch (viewError) {
+                console.log('[CANDIDATES] View does not exist or failed:', viewError.message);
+            }
+
+            // Strategy 2: Manual join approach (most reliable)
+            console.log('[CANDIDATES] Using manual join approach...');
+
+            // First get company jobs
+            const { data: companyJobs, error: jobsError } = await supabase
+                .from('Jobs')
+                .select('id, job_title')
+                .eq('company_id', company.id);
+
+            if (jobsError) {
+                console.error('[CANDIDATES] Error fetching company jobs:', jobsError);
+                throw new Error(`Failed to load company jobs: ${jobsError.message}`);
+            }
+
+            if (!companyJobs || companyJobs.length === 0) {
+                console.log('[CANDIDATES] No jobs found for company');
+                setCandidates([]);
+                return;
+            }
+
+            console.log('[CANDIDATES] Found', companyJobs.length, 'company jobs');
+            const jobIds = companyJobs.map(job => job.id);
+
+            // Get submissions for these jobs
+            const { data: submissions, error: submissionsError } = await supabase
                 .from('Job_Submissions')
-                .select(`
-                    *,
-                    Jobs!Job_Submissions_job_id_fkey (
-                        id,
-                        job_title,
-                        company_id
-                    )
-                `)
-                .eq('Jobs.company_id', company.id)
+                .select('*')
+                .in('job_id', jobIds)
                 .order('created_at', { ascending: false });
 
-            // If specific foreign key fails, try alternative
-            if (submissionsError && (submissionsError.code === 'PGRST200' || submissionsError.code === 'PGRST201')) {
-                console.log('Trying alternative foreign key...');
-                const { data: altData, error: altError } = await supabase
-                    .from('Job_Submissions')
-                    .select(`
-                        *,
-                        Jobs!job_submissions_job_id_fkey (
-                            id,
-                            job_title,
-                            company_id
-                        )
-                    `)
-                    .eq('Jobs.company_id', company.id)
-                    .order('created_at', { ascending: false });
-
-                if (!altError) {
-                    submissions = altData;
-                    submissionsError = null;
-                }
+            if (submissionsError) {
+                console.error('[CANDIDATES] Error fetching submissions:', submissionsError);
+                throw new Error(`Failed to load submissions: ${submissionsError.message}`);
             }
+
+            console.log('[CANDIDATES] Found', submissions?.length || 0, 'submissions');
+            await enrichCandidatesWithUserData(submissions || [], companyJobs || []);
 
             if (submissionsError) {
                 console.error('Error fetching submissions:', submissionsError);
@@ -153,7 +196,9 @@ function CandidatesPage() {
         }
     };
 
-    const enrichCandidatesWithUserData = async (submissions) => {
+    const enrichCandidatesWithUserData = async (submissions, companyJobs) => {
+        console.log('[CANDIDATES] Enriching', submissions.length, 'submissions with user data');
+
         // Get unique user emails/IDs
         const userEmails = [...new Set(submissions.map(sub => sub.user_email).filter(Boolean))];
         const userIds = [...new Set(submissions.map(sub => sub.user_id).filter(Boolean))];
@@ -162,6 +207,7 @@ function CandidatesPage() {
 
         // Fetch user data by email if available
         if (userEmails.length > 0) {
+            console.log('[CANDIDATES] Fetching users by email:', userEmails.length);
             const { data: usersByEmail } = await supabase
                 .from('Users')
                 .select('*')
@@ -171,6 +217,7 @@ function CandidatesPage() {
 
         // Fetch user data by ID if available
         if (userIds.length > 0) {
+            console.log('[CANDIDATES] Fetching users by ID:', userIds.length);
             const { data: usersById } = await supabase
                 .from('Users')
                 .select('*')
@@ -178,23 +225,41 @@ function CandidatesPage() {
             users = users.concat(usersById || []);
         }
 
-        // Combine submission data with user data
+        console.log('[CANDIDATES] Found', users.length, 'users');
+
+        // Create job lookup map
+        const jobMap = {};
+        if (companyJobs && Array.isArray(companyJobs)) {
+            companyJobs.forEach(job => {
+                jobMap[job.id] = job;
+            });
+        }
+
+        // Combine submission data with user data and job data
         const enrichedCandidates = submissions.map(submission => {
-            const user = users.find(u => 
+            const user = users.find(u =>
                 u.email === submission.user_email || u.id === submission.user_id
             );
+
+            const job = jobMap[submission.job_id];
 
             return {
                 ...submission,
                 user: user || {
+                    id: submission.user_id,
                     name: submission.user_name || 'Unknown Candidate',
                     email: submission.user_email || 'No email',
                     cv_url: null,
                     cv_filename: null
+                },
+                Jobs: job || {
+                    id: submission.job_id,
+                    job_title: 'Unknown Job'
                 }
             };
         });
 
+        console.log('[CANDIDATES] Enriched candidates:', enrichedCandidates.length);
         setCandidates(enrichedCandidates);
     };
 

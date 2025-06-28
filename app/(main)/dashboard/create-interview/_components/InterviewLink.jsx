@@ -14,8 +14,36 @@ function InterviewLink({ interview_id, formData }) {
     }
 
     const onCopyLink = async () => {
-        await navigator.clipboard.writeText(url);
-        toast('Link Copied')
+        try {
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                toast.success('Interview link copied to clipboard!');
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    document.execCommand('copy');
+                    toast.success('Interview link copied to clipboard!');
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    toast.error('Copy failed. Please copy the link manually.');
+                }
+
+                document.body.removeChild(textArea);
+            }
+        } catch (err) {
+            console.error('Copy to clipboard failed:', err);
+            toast.error('Copy failed. Please copy the link manually.');
+        }
     }
 
     return (

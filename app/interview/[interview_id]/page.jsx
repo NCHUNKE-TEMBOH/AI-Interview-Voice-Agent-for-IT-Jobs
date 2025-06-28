@@ -30,19 +30,37 @@ function Interview() {
         try {
             let { data: Interviews, error } = await supabase
                 .from('Interviews')
-                .select("jobPosition,jobDescription,duration,type")
+                .select("jobposition,jobdescription,duration,type,questionlist")
                 .eq('interview_id', interview_id)
-            setInterviewData(Interviews[0]);
-            setLoading(false);
-            if (Interviews?.length == 0) {
-                toast('Incorrect Interview Link')
 
+            if (error) {
+                console.error('Error fetching interview details:', error);
+                toast('Error loading interview details');
+                setLoading(false);
                 return;
             }
 
+            if (Interviews?.length == 0) {
+                toast('Incorrect Interview Link');
+                setLoading(false);
+                return;
+            }
 
+            // Map database column names to expected format
+            const interviewData = Interviews[0];
+            const mappedData = {
+                jobPosition: interviewData.jobposition,
+                jobDescription: interviewData.jobdescription,
+                duration: interviewData.duration,
+                type: interviewData.type,
+                questionList: interviewData.questionlist
+            };
+
+            setInterviewData(mappedData);
+            setLoading(false);
         }
         catch (e) {
+            console.error('Exception fetching interview details:', e);
             setLoading(false);
             toast('Incorrect Interview Link')
         }
@@ -50,20 +68,54 @@ function Interview() {
 
     const onJoinInterview = async () => {
         setLoading(true);
-        let { data: Interviews, error } = await supabase
-            .from('Interviews')
-            .select('*')
-            .eq('interview_id', interview_id);
+        try {
+            let { data: Interviews, error } = await supabase
+                .from('Interviews')
+                .select('*')
+                .eq('interview_id', interview_id);
 
-        console.log(Interviews[0]);
-        setInterviewInfo({
-            userName: userName,
-            userEmail: userEmail,
-            interviewData: Interviews[0]
-        });
-        router.push('/interview/' + interview_id + '/start')
-        setLoading(false);
+            if (error) {
+                console.error('Error fetching full interview data:', error);
+                toast('Error joining interview');
+                setLoading(false);
+                return;
+            }
 
+            if (!Interviews || Interviews.length === 0) {
+                toast('Interview not found');
+                setLoading(false);
+                return;
+            }
+
+            const rawData = Interviews[0];
+            console.log('Raw interview data:', rawData);
+
+            // Map database column names to expected format
+            const mappedInterviewData = {
+                jobPosition: rawData.jobposition,
+                jobDescription: rawData.jobdescription,
+                duration: rawData.duration,
+                type: rawData.type,
+                questionList: rawData.questionlist ? JSON.parse(rawData.questionlist) : [],
+                userEmail: rawData.useremail,
+                userName: rawData.username
+            };
+
+            console.log('Mapped interview data:', mappedInterviewData);
+
+            setInterviewInfo({
+                userName: userName,
+                userEmail: userEmail,
+                interviewData: mappedInterviewData
+            });
+
+            router.push('/interview/' + interview_id + '/start');
+        } catch (e) {
+            console.error('Exception joining interview:', e);
+            toast('Error joining interview');
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (

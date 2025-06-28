@@ -92,8 +92,8 @@ function UserProfile() {
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="flex items-center gap-4 mb-6">
-                <Button 
-                    variant="outline" 
+                <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => router.back()}
                 >
@@ -101,7 +101,7 @@ function UserProfile() {
                 </Button>
                 <h1 className="text-2xl font-bold">My Profile</h1>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
                 {/* Profile Information Card */}
                 <Card>
@@ -115,11 +115,11 @@ function UserProfile() {
                         {/* Profile Picture */}
                         <div className="flex items-center gap-4">
                             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                                {formData.picture ? (
-                                    <Image 
-                                        src={formData.picture} 
-                                        alt='user' 
-                                        width={80} 
+                                {formData.picture && formData.picture.trim() !== '' ? (
+                                    <Image
+                                        src={formData.picture}
+                                        alt='user'
+                                        width={80}
                                         height={80}
                                         className='w-20 h-20 rounded-full object-cover'
                                     />
@@ -149,7 +149,7 @@ function UserProfile() {
                                 required
                             />
                         </div>
-                        
+
                         {/* Email (Read-only) */}
                         <div>
                             <Label htmlFor="email">Email</Label>
@@ -180,14 +180,14 @@ function UserProfile() {
 
                         {/* Save Button */}
                         <div className="flex justify-end gap-4">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => router.back()}
                                 disabled={loading}
                             >
                                 Cancel
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={handleSave}
                                 disabled={loading}
                             >

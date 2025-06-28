@@ -18,7 +18,7 @@ function Settings() {
         <Card className="w-full max-w-md mx-auto overflow-hidden mt-20">
             <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                    <Image src={user?.picture} alt='user' width={100} height={100}
+                    <Image src={user?.picture || '/default-avatar.svg'} alt='user' width={100} height={100}
                         className='w-[70px] h-[70px] rounded-full'
                     />
 

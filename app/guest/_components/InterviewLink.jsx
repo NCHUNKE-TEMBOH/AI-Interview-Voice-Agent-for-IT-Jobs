@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Calendar, Clock, Copy, List, Mail, Plus, LogIn } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Copy, List, Mail, Plus, LogIn, CheckCircle } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import React from 'react'
+import React, { useState } from 'react'
 import { toast } from 'sonner'
 
 function InterviewLink({ interview_id, formData }) {
+    const [copied, setCopied] = useState(false);
+
     // Get the current host URL dynamically
     const getBaseUrl = () => {
         if (typeof window !== 'undefined') {
@@ -22,8 +24,40 @@ function InterviewLink({ interview_id, formData }) {
     }
 
     const onCopyLink = async () => {
-        await navigator.clipboard.writeText(url);
-        toast('Link Copied')
+        try {
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                setCopied(true);
+                toast.success('Interview link copied to clipboard!');
+                setTimeout(() => setCopied(false), 3000);
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    document.execCommand('copy');
+                    setCopied(true);
+                    toast.success('Interview link copied to clipboard!');
+                    setTimeout(() => setCopied(false), 3000);
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    toast.error('Copy failed. Please copy the link manually.');
+                }
+
+                document.body.removeChild(textArea);
+            }
+        } catch (err) {
+            console.error('Copy to clipboard failed:', err);
+            toast.error('Copy failed. Please copy the link manually.');
+        }
     }
 
     return (
@@ -45,7 +79,14 @@ function InterviewLink({ interview_id, formData }) {
                 </div>
                 <div className='mt-3 flex gap-3 items-center'>
                     <Input defaultValue={GetInterviewUrl()} disabled={true} />
-                    <Button onClick={() => onCopyLink()}> <Copy /> Copy Link </Button>
+                    <Button
+                        onClick={() => onCopyLink()}
+                        variant={copied ? "default" : "outline"}
+                        className={copied ? "bg-green-500 hover:bg-green-600 text-white" : ""}
+                    >
+                        {copied ? <CheckCircle className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                        {copied ? 'Copied!' : 'Copy Link'}
+                    </Button>
                 </div>
                 <hr className='my-5' />
                 <div className='flex gap-5 items-center'>

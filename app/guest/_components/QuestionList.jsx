@@ -49,7 +49,7 @@ function QuestionList({ formData, onCreateLink }) {
                 return match ? parseInt(match[1]) : 15;
             };
 
-            // Create interview data using the EXACT column names from your table
+            // Create interview data using the EXACT column names from your table (lowercase)
             const interviewData = {
                 interview_id: interview_id,
                 useremail: 'guest@practice.com',
@@ -63,9 +63,7 @@ function QuestionList({ formData, onCreateLink }) {
                 companycriteria: '',
                 questionlist: JSON.stringify(questionList),
                 companyid: null,
-                jobid: null,
-                is_guest: true,
-                status: 'active'
+                jobid: null
             };
 
             console.log('Creating guest interview with correct column names:', interviewData);

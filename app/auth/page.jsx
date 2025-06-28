@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { supabase } from '@/services/supabaseClient'
-import { Building2, Mail, User, UserCheck } from 'lucide-react'
+import { Building2, User, UserCheck } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
@@ -122,8 +122,7 @@ function Login() {
                         height={400}
                         className='w-[400px] h-[250px] rounded-2xl'
                     />
-                    <h2 className='text-2xl font-bold text-center mt-5'>Welcome to Skillin</h2>
-                    <p className='text-gray-500 text-center mb-4'>Sign in to continue</p>
+                    <p className='text-gray-500 text-center mb-4 mt-5'>Sign in to continue</p>
 
                     <div className="w-full mb-4">
                         <p className="text-sm text-gray-500 mb-2 text-center">I am a:</p>

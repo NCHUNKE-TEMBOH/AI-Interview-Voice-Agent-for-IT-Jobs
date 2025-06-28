@@ -8,9 +8,37 @@ import { toast } from 'sonner'
 function InterviewCard({ interview, viewDetail = false }) {
     const url = process.env.NEXT_PUBLIC_HOST_URL + "/interview/" + interview?.interview_id
 
-    const copyLink = () => {
-        navigator.clipboard.writeText(url);
-        toast('Copied')
+    const copyLink = async () => {
+        try {
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                toast.success('Interview link copied!');
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    document.execCommand('copy');
+                    toast.success('Interview link copied!');
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    toast.error('Copy failed. Please copy the link manually.');
+                }
+
+                document.body.removeChild(textArea);
+            }
+        } catch (err) {
+            console.error('Copy to clipboard failed:', err);
+            toast.error('Copy failed. Please copy the link manually.');
+        }
     }
 
     const onSend = () => {

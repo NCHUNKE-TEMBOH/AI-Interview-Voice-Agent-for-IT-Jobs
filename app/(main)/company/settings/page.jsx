@@ -35,7 +35,7 @@ function CompanySettings() {
                 <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                         <div className="w-[70px] h-[70px] rounded-full bg-blue-100 flex items-center justify-center">
-                            {company?.picture ? (
+                            {company?.picture && company.picture.trim() !== '' ? (
                                 <Image
                                     src={company.picture}
                                     alt='company'

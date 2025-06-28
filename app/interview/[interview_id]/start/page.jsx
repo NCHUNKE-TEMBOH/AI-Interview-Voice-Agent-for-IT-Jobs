@@ -26,10 +26,24 @@ function StartInterview() {
     }, [interviewInfo])
 
     const startCall = () => {
-        let questionList;
-        interviewInfo?.interviewData?.questionList.forEach((item, index) => (
-            questionList = item?.question + "," + questionList
-        ));
+        let questionList = "";
+
+        // Safely handle questionList - it could be an array or undefined
+        const questions = interviewInfo?.interviewData?.questionList;
+
+        if (questions && Array.isArray(questions) && questions.length > 0) {
+            questions.forEach((item, index) => {
+                if (item?.question) {
+                    questionList += (questionList ? ", " : "") + item.question;
+                }
+            });
+        } else {
+            // Fallback questions if none are found
+            questionList = "Tell me about yourself, What are your strengths and weaknesses, Why do you want this position";
+            console.warn('No questions found in interview data, using fallback questions');
+        }
+
+        console.log('Final question list for AI:', questionList);
         const assistantOptions = {
             name: "AI Recruiter",
             firstMessage: "Hi " + interviewInfo?.userName + ", how are you? Ready for your interview on " + interviewInfo?.interviewData?.jobPosition,
@@ -172,8 +186,8 @@ Key Guidelines:
             .from('interview-feedback')
             .insert([
                 {
-                    userName: interviewInfo?.userName,
-                    userEmail: interviewInfo?.userEmail,
+                    username: interviewInfo?.userName,
+                    useremail: interviewInfo?.userEmail,
                     interview_id: interview_id,
                     feedback: JSON.parse(FINAL_CONTENT),
                     recommended: false

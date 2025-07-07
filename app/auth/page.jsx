@@ -27,8 +27,16 @@ function Login() {
         localStorage.setItem('userType', userType)
 
         try {
+            // Get the correct redirect URL
+            const redirectURL = typeof window !== 'undefined'
+                ? window.location.origin
+                : 'https://skillin.vercel.app';
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
+                options: {
+                    redirectTo: redirectURL
+                }
             })
 
             if (error) {

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+// Vercel Edge Runtime optimization
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 seconds max for free tier
+
 // Initialize OpenAI with your API key
 let openai;
 try {

@@ -3,47 +3,54 @@ import { supabase } from './supabaseClient';
 /**
  * Initialize database tables if they don't exist..
  * This function will be called when the application starts
+ * Optimized for Vercel serverless environment
  */
 export const initializeDatabase = async () => {
+  // Skip database initialization in production to avoid timeout issues
+  if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+    console.log('Skipping database initialization in Vercel production environment');
+    return;
+  }
+
   console.log('Initializing database...');
-  
+
   try {
     // Check if the Companies table exists
     const { error: companiesError } = await supabase
       .from('Companies')
       .select('id')
       .limit(1);
-    
+
     if (companiesError && companiesError.code === '42P01') {
       console.log('Creating Companies table...');
       // Create Companies table
       await supabase.rpc('create_companies_table');
     }
-    
+
     // Check if the Jobs table exists
     const { error: jobsError } = await supabase
       .from('Jobs')
       .select('id')
       .limit(1);
-    
+
     if (jobsError && jobsError.code === '42P01') {
       console.log('Creating Jobs table...');
       // Create Jobs table
       await supabase.rpc('create_jobs_table');
     }
-    
+
     // Check if the Job_Submissions table exists
     const { error: submissionsError } = await supabase
       .from('Job_Submissions')
       .select('id')
       .limit(1);
-    
+
     if (submissionsError && submissionsError.code === '42P01') {
       console.log('Creating Job_Submissions table...');
       // Create Job_Submissions table
       await supabase.rpc('create_job_submissions_table');
     }
-    
+
     console.log('Database initialization complete');
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -92,7 +99,7 @@ export const createStoredProcedures = async () => {
   END;
   $$ LANGUAGE plpgsql;
   `;
-  
+
   const createJobsTableSQL = `
   CREATE OR REPLACE FUNCTION create_jobs_table()
   RETURNS void AS $$
@@ -144,7 +151,7 @@ export const createStoredProcedures = async () => {
   END;
   $$ LANGUAGE plpgsql;
   `;
-  
+
   const createJobSubmissionsTableSQL = `
   CREATE OR REPLACE FUNCTION create_job_submissions_table()
   RETURNS void AS $$
@@ -182,7 +189,7 @@ export const createStoredProcedures = async () => {
   END;
   $$ LANGUAGE plpgsql;
   `;
-  
+
   console.log('SQL for stored procedures:');
   console.log(createCompaniesTableSQL);
   console.log(createJobsTableSQL);

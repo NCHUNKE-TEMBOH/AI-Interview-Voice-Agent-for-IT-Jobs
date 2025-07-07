@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "vercel-build": "next build",
+    "postbuild": "next-sitemap",
+    "analyze": "cross-env ANALYZE=true next build",
+    "clean": "rm -rf .next out"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.0.0"
   },
   "dependencies": {
     "@google/generative-ai": "latest",

@@ -2,6 +2,10 @@ import { QUESTIONS_PROMPT } from "@/services/Constants";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+// Vercel Edge Runtime optimization
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 seconds max for free tier
+
 export async function POST(req) {
     try {
         const {

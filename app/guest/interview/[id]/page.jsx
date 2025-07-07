@@ -658,85 +658,85 @@ function GuestInterviewPage() {
                                     <span className="text-white text-sm">You</span>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Recording Controls */}
-                        <div className="flex justify-center gap-4 mt-6">
-                            <div className="flex justify-center items-center gap-4">
-                                {/* Mic Control */}
-                                <Button
-                                    variant={micEnabled ? "default" : "destructive"}
-                                    size="lg"
-                                    onClick={toggleMic}
-                                    className="rounded-full w-12 h-12 p-0"
-                                >
-                                    {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                                </Button>
+                            {/* Recording Controls */}
+                            <div className="flex justify-center gap-4 mt-6">
+                                <div className="flex justify-center items-center gap-4">
+                                    {/* Mic Control */}
+                                    <Button
+                                        variant={micEnabled ? "default" : "destructive"}
+                                        size="lg"
+                                        onClick={toggleMic}
+                                        className="rounded-full w-12 h-12 p-0"
+                                    >
+                                        {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                                    </Button>
 
-                                {/* Record Response Button */}
-                                <Button
-                                    variant={isRecording ? "destructive" : "default"}
-                                    size="lg"
-                                    onClick={isRecording ? stopRecording : startRecording}
-                                    disabled={!mediaRecorder || aiSpeaking}
-                                    className="px-6"
-                                >
-                                    {isRecording ? (
-                                        <>
-                                            <Square className="mr-2 h-4 w-4" />
-                                            Stop Recording
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Mic className="mr-2 h-4 w-4" />
-                                            Record Answer
-                                        </>
-                                    )}
-                                </Button>
+                                    {/* Record Response Button */}
+                                    <Button
+                                        variant={isRecording ? "destructive" : "default"}
+                                        size="lg"
+                                        onClick={isRecording ? stopRecording : startRecording}
+                                        disabled={!mediaRecorder || aiSpeaking}
+                                        className="px-6"
+                                    >
+                                        {isRecording ? (
+                                            <>
+                                                <Square className="mr-2 h-4 w-4" />
+                                                Stop Recording
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Mic className="mr-2 h-4 w-4" />
+                                                Record Answer
+                                            </>
+                                        )}
+                                    </Button>
 
-                                {/* Camera Control */}
-                                <Button
-                                    variant={cameraEnabled ? "default" : "destructive"}
-                                    size="lg"
-                                    onClick={toggleCamera}
-                                    className="rounded-full w-12 h-12 p-0"
-                                >
-                                    {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-                                </Button>
+                                    {/* Camera Control */}
+                                    <Button
+                                        variant={cameraEnabled ? "default" : "destructive"}
+                                        size="lg"
+                                        onClick={toggleCamera}
+                                        className="rounded-full w-12 h-12 p-0"
+                                    >
+                                        {cameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+                                    </Button>
 
-                                {/* End Interview */}
-                                <Button
-                                    variant="destructive"
-                                    size="lg"
-                                    onClick={completeInterview}
-                                    className="ml-8"
-                                >
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    End Interview
-                                </Button>
-                            </div>
+                                    {/* End Interview */}
+                                    <Button
+                                        variant="destructive"
+                                        size="lg"
+                                        onClick={completeInterview}
+                                        className="ml-8"
+                                    >
+                                        <Phone className="mr-2 h-4 w-4" />
+                                        End Interview
+                                    </Button>
+                                </div>
 
-                            {/* Navigation */}
-                            <div className="flex justify-between mt-6">
-                                <Button
-                                    variant="outline"
-                                    onClick={previousQuestion}
-                                    disabled={currentQuestionIndex === 0}
-                                >
-                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                    Previous
-                                </Button>
+                                {/* Navigation */}
+                                <div className="flex justify-between mt-6">
+                                    <Button
+                                        variant="outline"
+                                        onClick={previousQuestion}
+                                        disabled={currentQuestionIndex === 0}
+                                    >
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Previous
+                                    </Button>
 
-                                <Button onClick={nextQuestion}>
-                                    {currentQuestionIndex === questions.length - 1 ? (
-                                        "Complete Interview"
-                                    ) : (
-                                        <>
-                                            Next
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </>
-                                    )}
-                                </Button>
+                                    <Button onClick={nextQuestion}>
+                                        {currentQuestionIndex === questions.length - 1 ? (
+                                            "Complete Interview"
+                                        ) : (
+                                            <>
+                                                Next
+                                                <ArrowRight className="ml-2 h-4 w-4" />
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

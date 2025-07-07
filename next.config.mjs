@@ -12,8 +12,8 @@ const nextConfig = {
     },
 
     // Optimize for Vercel deployment
+    serverExternalPackages: ['@google/generative-ai'],
     experimental: {
-        serverComponentsExternalPackages: ['@google/generative-ai'],
         optimizePackageImports: ['lucide-react', '@radix-ui/react-icons']
     },
 

@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Vercel Edge Runtime optimization
+export const runtime = 'nodejs';
+export const maxDuration = 30; // 30 seconds max for free tier
+
+// Initialize OpenAI client only when needed
+let openai = null;
+
+function getOpenAIClient() {
+  if (!openai && process.env.OPENAI_API_KEY) {
+    console.log('Initializing OpenAI with API key:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 export async function POST(req) {
   try {
@@ -11,6 +24,16 @@ export async function POST(req) {
 
     if (!responses || responses.length === 0) {
       return NextResponse.json({ error: 'No responses provided' }, { status: 400 });
+    }
+
+    // Get OpenAI client
+    const client = getOpenAIClient();
+    if (!client) {
+      console.error('OpenAI client not available - API key missing');
+      return NextResponse.json({
+        error: 'AI service not available',
+        fallback: true
+      }, { status: 503 });
     }
 
     // Create detailed analysis prompt
@@ -123,7 +146,7 @@ CRITICAL ANALYSIS POINTS:
 Provide specific, actionable feedback focusing on voice confidence, response completion, and interview performance improvement.
 `;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "gpt-4",
       messages: [
         {

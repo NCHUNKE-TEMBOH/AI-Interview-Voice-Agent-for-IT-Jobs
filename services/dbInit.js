@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Initialize database tables if they don't exist
+ * Initialize database tables if they don't exist..
  * This function will be called when the application starts
  */
 export const initializeDatabase = async () => {

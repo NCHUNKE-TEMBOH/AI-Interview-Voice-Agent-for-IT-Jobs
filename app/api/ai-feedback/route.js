@@ -34,28 +34,32 @@ export async function POST(request) {
     // Poor performance (0-2 questions or very short duration)
     if (questionsAnswered <= 2 || duration < 5) {
       return {
-        overallScore: Math.max(15, questionsAnswered * 10),
-        strengths: questionsAnswered > 0 ? ["Attempted to participate in the interview"] : ["Showed up for the interview"],
+        overallScore: questionsAnswered === 0 ? 5 : Math.max(10, questionsAnswered * 8),
+        strengths: questionsAnswered === 0 ? ["Attended the interview session"] : ["Made minimal attempt to participate"],
         improvements: [
-          "Complete more interview questions",
-          "Provide more detailed responses",
-          "Engage more actively in the conversation",
-          "Practice common interview questions"
+          "Complete all interview questions",
+          "Provide substantive, detailed responses",
+          "Demonstrate better preparation and engagement",
+          "Practice interview skills extensively",
+          "Show more enthusiasm and interest",
+          "Improve communication clarity"
         ],
         areasForImprovement: [
-          "Interview completion rate",
-          "Response depth and detail",
-          "Communication engagement"
+          "Interview completion rate - Critical",
+          "Response quality and depth - Poor",
+          "Communication engagement - Inadequate",
+          "Technical knowledge demonstration - Insufficient",
+          "Professional presentation - Needs significant improvement"
         ],
         recommendation: questionsAnswered === 0
-          ? "The candidate did not answer any questions during the interview. This suggests they may need more preparation or were experiencing technical difficulties. We recommend additional practice sessions before proceeding."
-          : `The candidate answered only ${questionsAnswered} question(s) out of ${totalQuestions}. This indicates limited engagement or preparation. More practice and preparation would be beneficial before future interviews.`,
+          ? "POOR PERFORMANCE: The candidate did not answer any questions during the interview. This is unacceptable for any professional role. Extensive preparation and practice are required before attempting another interview."
+          : `POOR PERFORMANCE: The candidate answered only ${questionsAnswered} question(s) out of ${totalQuestions}, showing inadequate preparation and engagement. This performance is below professional standards and requires significant improvement.`,
         overallFeedback: questionsAnswered === 0
-          ? "No responses were provided during the interview session. This could indicate technical issues, nervousness, or lack of preparation."
-          : `Limited participation with only ${questionsAnswered} question(s) answered. The candidate would benefit from more interview practice and preparation.`,
-        communicationScore: Math.max(10, questionsAnswered * 15),
-        technicalScore: Math.max(5, questionsAnswered * 12),
-        confidenceLevel: "Low",
+          ? "UNACCEPTABLE: No meaningful participation in the interview. This indicates severe lack of preparation, technical issues, or unprofessional behavior."
+          : `POOR: Minimal participation with only ${questionsAnswered} question(s) answered. This performance is insufficient for professional consideration and requires substantial improvement.`,
+        communicationScore: questionsAnswered === 0 ? 5 : Math.max(8, questionsAnswered * 10),
+        technicalScore: questionsAnswered === 0 ? 3 : Math.max(5, questionsAnswered * 8),
+        confidenceLevel: "Very Low",
         questionsCompleted: questionsAnswered,
         actualDuration: duration,
         completionRate: Math.round(completionRate)
@@ -65,27 +69,31 @@ export async function POST(request) {
     // Average performance (3-4 questions)
     if (questionsAnswered <= 4) {
       return {
-        overallScore: 45 + (questionsAnswered * 8),
+        overallScore: 35 + (questionsAnswered * 6),
         strengths: [
-          "Participated in the interview process",
-          "Provided responses to multiple questions",
-          "Showed engagement with the interviewer"
+          "Participated in most of the interview process",
+          "Provided responses to several questions",
+          "Showed some engagement with the interviewer"
         ],
         improvements: [
-          "Complete all interview questions",
-          "Provide more comprehensive answers",
-          "Include specific examples in responses"
+          "Complete ALL interview questions - this is essential",
+          "Provide more comprehensive and detailed answers",
+          "Include specific examples and experiences in responses",
+          "Demonstrate better preparation and knowledge",
+          "Show more enthusiasm and professional interest"
         ],
         areasForImprovement: [
-          "Interview completion",
-          "Response comprehensiveness",
-          "Technical depth"
+          "Interview completion rate - Incomplete",
+          "Response comprehensiveness - Below expectations",
+          "Technical depth - Insufficient",
+          "Professional engagement - Needs improvement",
+          "Preparation level - Inadequate"
         ],
-        recommendation: `The candidate answered ${questionsAnswered} out of ${totalQuestions} questions, showing moderate engagement. With more preparation and practice, they could improve their interview performance significantly.`,
-        overallFeedback: `Moderate performance with ${questionsAnswered} questions completed. The candidate demonstrated basic communication skills but could benefit from more thorough preparation.`,
-        communicationScore: 50 + (questionsAnswered * 8),
-        technicalScore: 40 + (questionsAnswered * 10),
-        confidenceLevel: "Medium",
+        recommendation: `BELOW AVERAGE: The candidate answered only ${questionsAnswered} out of ${totalQuestions} questions (${Math.round(completionRate)}% completion). This incomplete performance indicates insufficient preparation and engagement. Significant improvement is needed for professional consideration.`,
+        overallFeedback: `BELOW EXPECTATIONS: Incomplete interview participation with only ${questionsAnswered} questions answered. While the candidate showed some engagement, the performance falls short of professional standards and requires substantial improvement.`,
+        communicationScore: 35 + (questionsAnswered * 6),
+        technicalScore: 25 + (questionsAnswered * 8),
+        confidenceLevel: "Low",
         questionsCompleted: questionsAnswered,
         actualDuration: duration,
         completionRate: Math.round(completionRate)
@@ -233,33 +241,44 @@ Below is the transcript of the interview:
 
 ${formattedConversation}
 
-IMPORTANT SCORING GUIDELINES:
-- If candidate answered 0-2 questions: Score should be 15-35 (Poor performance)
-- If candidate answered 3-4 questions: Score should be 40-65 (Average performance)
-- If candidate answered 5+ questions: Score should be 70-95 (Good to excellent performance)
-- Consider response quality, not just quantity
-- Be realistic about performance based on actual participation
+CRITICAL SCORING GUIDELINES - BE STRICT AND REALISTIC:
+- If candidate answered 0 questions: Score 5-15 (UNACCEPTABLE - Failed interview)
+- If candidate answered 1-2 questions: Score 10-25 (POOR - Inadequate performance)
+- If candidate answered 3-4 questions: Score 30-50 (BELOW AVERAGE - Incomplete performance)
+- If candidate answered 5+ questions: Score 60-85 (ACCEPTABLE to GOOD performance)
+- Only give 85+ scores for truly exceptional responses with depth and insight
+- Consider response quality heavily - short, vague answers should be scored lower
+- Be harsh on incomplete interviews - this is unprofessional behavior
+- Incomplete participation (less than 80% completion) should receive poor scores
 
 Please analyze the candidate's responses and provide feedback in the following JSON format:
 
 \`\`\`json
 {
-  "overallScore": [Score based on actual performance: 15-35 for poor, 40-65 for average, 70-95 for good],
-  "strengths": ["List actual strengths demonstrated, or minimal if performance was poor"],
-  "improvements": ["List specific areas for improvement based on actual performance"],
-  "areasForImprovement": ["List specific areas for improvement based on actual performance"],
-  "recommendation": "A realistic assessment based on actual interview participation and quality",
-  "overallFeedback": "A honest evaluation reflecting the candidate's actual performance level",
-  "communicationScore": [Score based on actual communication quality],
-  "technicalScore": [Score based on technical responses provided],
-  "confidenceLevel": "High|Medium|Low [based on actual performance]",
+  "overallScore": [STRICT SCORING: 5-15 for failed, 10-25 for poor, 30-50 for below average, 60-85 for acceptable/good],
+  "strengths": ["List ONLY actual strengths demonstrated - be honest, use 'minimal strengths' if performance was poor"],
+  "improvements": ["List extensive improvements needed for poor performance, be specific and direct"],
+  "areasForImprovement": ["List critical areas needing improvement, mark as 'Critical' or 'Poor' for bad performance"],
+  "recommendation": "Be brutally honest - use terms like 'POOR PERFORMANCE', 'UNACCEPTABLE', 'BELOW PROFESSIONAL STANDARDS' for bad interviews",
+  "overallFeedback": "Give honest, direct feedback that reflects reality - don't sugarcoat poor performance",
+  "communicationScore": [Score communication harshly if responses were minimal or unclear],
+  "technicalScore": [Score technical ability based on actual demonstration, not potential],
+  "confidenceLevel": "Very Low|Low|Medium|High [be realistic - most incomplete interviews should be Very Low or Low]",
   "questionsCompleted": ${actualQuestionsAnswered},
   "actualDuration": ${actualDuration},
   "completionRate": ${completionRate}
 }
 \`\`\`
 
-Base your analysis strictly on the actual performance demonstrated. If the candidate provided few or no meaningful responses, reflect this accurately in the scores and feedback.
+CRITICAL INSTRUCTIONS:
+1. Base your analysis STRICTLY on actual performance demonstrated
+2. If the candidate provided few or no meaningful responses, give them a POOR score (5-25)
+3. Incomplete interviews (less than 80% completion) should receive scores below 50
+4. Do NOT be generous with scoring - be realistic and professional
+5. Use harsh language for poor performance: "UNACCEPTABLE", "POOR", "BELOW STANDARDS"
+6. Only candidates who complete most/all questions with quality responses deserve good scores
+7. Short, vague, or irrelevant answers should be scored harshly
+8. Professional interviews require professional participation - score accordingly
 `;
 
     try {

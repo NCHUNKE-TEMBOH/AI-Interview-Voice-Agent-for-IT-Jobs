@@ -41,10 +41,9 @@ function StartInterview() {
 
     // Interview control states
     const [isInterviewEnding, setIsInterviewEnding] = useState(false);
+    const [microphonePermission, setMicrophonePermission] = useState('granted');
     const [errorMessage, setErrorMessage] = useState("");
     const [showError, setShowError] = useState(false);
-    const [microphonePermission, setMicrophonePermission] = useState('unknown');
-    const [isRequestingPermission, setIsRequestingPermission] = useState(false);
     const [interviewRecord, setInterviewRecord] = useState(null);
 
     const voiceServiceRef = useRef(null);
@@ -111,53 +110,11 @@ function StartInterview() {
             setIsSpeaking(false);
         });
 
-        // Check initial microphone permission status
-        checkMicrophonePermission();
+        // Set microphone permission to granted by default
+        setMicrophonePermission('granted');
     }
 
-    const checkMicrophonePermission = async () => {
-        try {
-            if (navigator.permissions) {
-                const permission = await navigator.permissions.query({ name: 'microphone' });
-                setMicrophonePermission(permission.state);
 
-                // Listen for permission changes
-                permission.onchange = () => {
-                    setMicrophonePermission(permission.state);
-                }
-            }
-        } catch (error) {
-            console.log("Permission query not supported");
-            setMicrophonePermission('unknown');
-        }
-    }
-
-    const handleRequestMicrophonePermission = async () => {
-        if (!voiceServiceRef.current) return;
-
-        setIsRequestingPermission(true);
-        setShowError(false);
-
-        try {
-            const hasPermission = await voiceServiceRef.current.requestMicrophonePermission();
-            if (hasPermission) {
-                setMicrophonePermission('granted');
-                setErrorMessage("");
-                setShowError(false);
-            } else {
-                setMicrophonePermission('denied');
-                setErrorMessage("Microphone permission was denied. Please click the microphone icon in your browser's address bar to allow access.");
-                setShowError(true);
-            }
-        } catch (error) {
-            console.error("Error requesting microphone permission:", error);
-            setMicrophonePermission('denied');
-            setErrorMessage("Failed to request microphone permission. Please check your browser settings.");
-            setShowError(true);
-        } finally {
-            setIsRequestingPermission(false);
-        }
-    }
 
     const createInterviewRecord = async () => {
         try {
@@ -175,7 +132,7 @@ function StartInterview() {
             setInterviewRecord(localRecord);
             return localRecord;
         } catch (error) {
-            console.error("Error creating interview record:", error);
+            console.log("Error creating interview record:", error);
             return null;
         }
     }
@@ -191,7 +148,7 @@ function StartInterview() {
                 updated_at: new Date().toISOString()
             }));
         } catch (error) {
-            console.error("Error updating interview record:", error);
+            console.log("Error updating interview record:", error);
         }
     }
 
@@ -210,7 +167,7 @@ function StartInterview() {
             // End interview due to time
             await endInterview(false, "time_up");
         } catch (error) {
-            console.error("Error handling time up:", error);
+            console.log("Error handling time up:", error);
             await endInterview(false, "time_up");
         }
     }
@@ -245,7 +202,7 @@ Are you ready to begin? Let's start with our first question.`;
             // Generate and ask first question
             await askNextQuestion();
         } catch (error) {
-            console.error("Error starting interview:", error);
+            console.log("Error starting interview:", error);
             setIsSpeaking(false);
         }
     }
@@ -324,7 +281,7 @@ Are you ready to begin? Let's start with our first question.`;
                 startConversationalListening();
             }, 1000);
         } catch (error) {
-            console.error("Error asking question:", error);
+            console.log("Error asking question:", error);
             setIsSpeaking(false);
         }
     }
@@ -350,7 +307,7 @@ Are you ready to begin? Let's start with our first question.`;
                 await processResponse(response);
             }
         } catch (error) {
-            console.error("Error in conversational listening:", error);
+            console.log("Error in conversational listening:", error);
             setIsListening(false);
             setIsWaitingForResponse(false);
 
@@ -459,7 +416,7 @@ Are you ready to begin? Let's start with our first question.`;
                     last_ai_feedback: aiResponse
                 });
             } catch (dbError) {
-                console.error("Error updating local record:", dbError);
+                console.log("Error updating local record:", dbError);
             }
 
             // Increment question count after user responds
@@ -480,7 +437,7 @@ Are you ready to begin? Let's start with our first question.`;
                 }
             }, 3000); // Give more time for natural conversation flow
         } catch (error) {
-            console.error("Error processing response:", error);
+            console.log("Error processing response:", error);
             setIsSpeaking(false);
         }
     }
@@ -554,7 +511,7 @@ This concludes our interview. Thank you for your time.`;
             // Generate final feedback using existing system
             await GenerateFeedback();
         } catch (error) {
-            console.error("Error ending interview:", error);
+            console.log("Error ending interview:", error);
             setIsSpeaking(false);
             router.push('/interview/' + interview_id + "/completed");
         }
@@ -660,7 +617,7 @@ This concludes our interview. Thank you for your time.`;
 
             router.replace('/interview/' + interview_id + "/completed");
         } catch (error) {
-            console.error("Error generating feedback:", error);
+            console.log("Error generating feedback:", error);
             router.replace('/interview/' + interview_id + "/completed");
         } finally {
             setLoading(false);
@@ -711,7 +668,7 @@ This concludes our interview. Thank you for your time.`;
                 startConversationalListening();
             }, 1000);
         } catch (error) {
-            console.error("Error providing help:", error);
+            console.log("Error providing help:", error);
             setIsSpeaking(false);
         }
     }
@@ -836,34 +793,7 @@ This concludes our interview. Thank you for your time.`;
             )}
 
             {/* Error Message */}
-            {showError && (
-                <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <p className="text-sm">{errorMessage}</p>
-                    {errorMessage.includes("Microphone") && (
-                        <Button
-                            onClick={handleRequestMicrophonePermission}
-                            disabled={isRequestingPermission}
-                            className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs"
-                        >
-                            {isRequestingPermission ? "Requesting..." : "Try Again"}
-                        </Button>
-                    )}
-                </div>
-            )}
 
-            {/* Microphone Permission */}
-            {!isConnected && microphonePermission !== 'granted' && (
-                <div className="mt-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
-                    <p className="text-sm mb-3">🎤 This interview requires microphone access for voice interaction.</p>
-                    <Button
-                        onClick={handleRequestMicrophonePermission}
-                        disabled={isRequestingPermission}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
-                    >
-                        {isRequestingPermission ? "Requesting..." : "Allow Microphone Access"}
-                    </Button>
-                </div>
-            )}
 
             {/* Conversation Display */}
             {isConnected && conversationHistory.length > 0 && (
@@ -914,6 +844,13 @@ This concludes our interview. Thank you for your time.`;
                 </div>
             )}
 
+            {/* Error Display */}
+            {showError && (
+                <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    <p className="text-sm">{errorMessage}</p>
+                </div>
+            )}
+
             {/* Current Question Display */}
             {currentQuestion && isConnected && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
@@ -927,7 +864,7 @@ This concludes our interview. Thank you for your time.`;
                 {!isConnected ? (
                     <Button
                         onClick={startInterview}
-                        disabled={microphonePermission === 'denied' || loading}
+                        disabled={loading}
                         className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                         <Phone className="w-5 h-5 mr-2" />

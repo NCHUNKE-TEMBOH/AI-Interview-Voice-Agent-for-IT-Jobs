@@ -55,27 +55,64 @@ const InterviewComplete = () => {
     };
 
     const getScoreColor = (score) => {
-        if (score >= 80) return 'text-green-600';
-        if (score >= 60) return 'text-yellow-600';
+        if (score >= 70) return 'text-green-600';
+        if (score >= 50) return 'text-yellow-600';
+        if (score >= 30) return 'text-orange-600';
         return 'text-red-600';
     };
 
+    const getPerformanceGrade = (score, questionsAnswered) => {
+        // Failed grades for poor performance
+        if (questionsAnswered === 0) return 'F (FAILED - No Participation)';
+        if (questionsAnswered <= 2 || score < 30) return 'F (FAILED - Poor Performance)';
+        if (questionsAnswered <= 3 || score < 50) return 'D (BELOW AVERAGE - Needs Improvement)';
+        if (score < 70) return 'C (AVERAGE - Acceptable)';
+        if (score < 85) return 'B (GOOD - Above Average)';
+        return 'A (EXCELLENT - Outstanding)';
+    };
+
+    const getPerformanceMessage = (score, questionsAnswered) => {
+        if (questionsAnswered === 0) {
+            return 'UNACCEPTABLE: No questions were answered during the interview. This indicates a complete failure to participate professionally.';
+        }
+        if (questionsAnswered <= 2 || score < 30) {
+            return 'POOR PERFORMANCE: Minimal participation and inadequate responses. This performance is below professional standards.';
+        }
+        if (questionsAnswered <= 3 || score < 50) {
+            return 'BELOW EXPECTATIONS: Incomplete interview with insufficient engagement. Significant improvement needed.';
+        }
+        if (score < 70) {
+            return 'AVERAGE: Acceptable performance but with room for improvement in several areas.';
+        }
+        if (score < 85) {
+            return 'GOOD: Above average performance with strong engagement and communication skills.';
+        }
+        return 'EXCELLENT: Outstanding performance demonstrating exceptional skills and preparation.';
+    };
+
     const getScoreGrade = (score) => {
-        if (score >= 90) return 'A+';
-        if (score >= 80) return 'A';
-        if (score >= 70) return 'B+';
-        if (score >= 60) return 'B';
-        if (score >= 50) return 'C+';
-        if (score >= 40) return 'C';
-        return 'D';
+        const questionsAnswered = feedback.questionsCompleted || feedback.questions_completed || 0;
+
+        // Failed grades for poor performance
+        if (questionsAnswered === 0) return 'F';
+        if (questionsAnswered <= 2 || score < 30) return 'F';
+        if (questionsAnswered <= 3 || score < 50) return 'D';
+        if (score < 70) return 'C';
+        if (score < 85) return 'B';
+        if (score < 95) return 'A';
+        return 'A+';
     };
 
     const getPerformanceLevel = (score) => {
-        if (score >= 85) return 'Excellent';
-        if (score >= 70) return 'Good';
-        if (score >= 55) return 'Average';
-        if (score >= 40) return 'Below Average';
-        return 'Needs Improvement';
+        const questionsAnswered = feedback.questionsCompleted || feedback.questions_completed || 0;
+
+        // Failed performance levels
+        if (questionsAnswered === 0) return 'FAILED - No Participation';
+        if (questionsAnswered <= 2 || score < 30) return 'FAILED - Poor Performance';
+        if (questionsAnswered <= 3 || score < 50) return 'Below Average - Needs Improvement';
+        if (score < 70) return 'Average';
+        if (score < 85) return 'Good';
+        return 'Excellent';
     };
 
     const downloadPDF = () => {
@@ -177,13 +214,22 @@ const InterviewComplete = () => {
             yPosition += 10;
 
             doc.setFont(undefined, 'normal');
-            doc.text(`Questions Completed: ${feedback.questionsCompleted || feedback.questions_completed || 'N/A'}`, margin, yPosition);
+            const questionsAnswered = feedback.questionsCompleted || feedback.questions_completed || 0;
+            const duration = feedback.actualDuration || feedback.actual_duration || 0;
+            const commScore = feedback.communicationScore ||
+                (questionsAnswered === 0 ? 5 : Math.max(10, Math.round(overallScore * 0.6)));
+            const confidenceLevel = feedback.confidenceLevel ||
+                (questionsAnswered === 0 ? 'Very Low' :
+                    questionsAnswered <= 2 ? 'Low' :
+                        questionsAnswered <= 4 ? 'Medium' : 'High');
+
+            doc.text(`Questions Completed: ${questionsAnswered}`, margin, yPosition);
             yPosition += 7;
-            doc.text(`Duration: ${feedback.actualDuration || feedback.actual_duration || 'N/A'} minutes`, margin, yPosition);
+            doc.text(`Duration: ${duration} minutes`, margin, yPosition);
             yPosition += 7;
-            doc.text(`Communication Score: ${feedback.communicationScore || Math.round(overallScore * 0.8) || 'N/A'}%`, margin, yPosition);
+            doc.text(`Communication Score: ${commScore}%`, margin, yPosition);
             yPosition += 7;
-            doc.text(`Confidence Level: ${feedback.confidenceLevel || (overallScore >= 70 ? 'High' : overallScore >= 50 ? 'Medium' : 'Low')}`, margin, yPosition);
+            doc.text(`Confidence Level: ${confidenceLevel}`, margin, yPosition);
 
             // Footer
             yPosition = doc.internal.pageSize.height - 20;
@@ -270,6 +316,13 @@ const InterviewComplete = () => {
                         >
                             {getPerformanceLevel(overallScore)}
                         </Badge>
+
+                        {/* Performance Message */}
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <p className={`text-sm font-medium ${getScoreColor(overallScore)}`}>
+                                {getPerformanceMessage(overallScore, feedback.questionsCompleted || feedback.questions_completed || 0)}
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -353,25 +406,42 @@ const InterviewComplete = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="text-center p-4 bg-gray-50 rounded-lg">
                                 <div className="text-2xl font-bold text-gray-800">
-                                    {feedback.questionsCompleted || feedback.questions_completed || 'N/A'}
+                                    {(() => {
+                                        const questionsAnswered = feedback.questionsCompleted || feedback.questions_completed || 0;
+                                        return questionsAnswered;
+                                    })()}
                                 </div>
                                 <div className="text-sm text-gray-600">Questions Answered</div>
                             </div>
                             <div className="text-center p-4 bg-gray-50 rounded-lg">
                                 <div className="text-2xl font-bold text-gray-800">
-                                    {feedback.actualDuration || feedback.actual_duration || 'N/A'}min
+                                    {(() => {
+                                        const duration = feedback.actualDuration || feedback.actual_duration || 0;
+                                        return duration > 0 ? `${duration}min` : '0min';
+                                    })()}
                                 </div>
                                 <div className="text-sm text-gray-600">Interview Duration</div>
                             </div>
                             <div className="text-center p-4 bg-gray-50 rounded-lg">
                                 <div className="text-2xl font-bold text-gray-800">
-                                    {feedback.communicationScore || Math.round(overallScore * 0.8) || 'N/A'}%
+                                    {(() => {
+                                        const commScore = feedback.communicationScore ||
+                                            (feedback.questionsCompleted || feedback.questions_completed || 0) === 0 ? 5 :
+                                            Math.max(10, Math.round(overallScore * 0.6));
+                                        return `${commScore}%`;
+                                    })()}
                                 </div>
                                 <div className="text-sm text-gray-600">Communication</div>
                             </div>
                             <div className="text-center p-4 bg-gray-50 rounded-lg">
                                 <div className="text-2xl font-bold text-gray-800">
-                                    {feedback.confidenceLevel || (overallScore >= 70 ? 'High' : overallScore >= 50 ? 'Medium' : 'Low')}
+                                    {(() => {
+                                        const questionsAnswered = feedback.questionsCompleted || feedback.questions_completed || 0;
+                                        return feedback.confidenceLevel ||
+                                            (questionsAnswered === 0 ? 'Very Low' :
+                                                questionsAnswered <= 2 ? 'Low' :
+                                                    questionsAnswered <= 4 ? 'Medium' : 'High');
+                                    })()}
                                 </div>
                                 <div className="text-sm text-gray-600">Confidence Level</div>
                             </div>

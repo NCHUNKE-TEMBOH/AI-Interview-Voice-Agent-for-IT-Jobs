@@ -67,8 +67,8 @@ ${analytics ? JSON.stringify(analytics, null, 2) : 'No analytics available'}
 Please provide a comprehensive interview feedback analysis in the following JSON format:
 
 {
-  "overallScore": 85,
-  "overallFeedback": "Detailed overall performance summary",
+  "overallScore": [REALISTIC SCORE: Use strict criteria above - most incomplete interviews should score 30-50],
+  "overallFeedback": "Honest, direct performance summary - use 'POOR', 'BELOW STANDARDS' for bad performance",
   "strengths": [
     "Specific strength 1",
     "Specific strength 2",
@@ -81,23 +81,23 @@ Please provide a comprehensive interview feedback analysis in the following JSON
   ],
   "detailedMetrics": {
     "communicationSkills": {
-      "score": 80,
-      "feedback": "Detailed feedback on communication"
+      "score": [Score based on actual communication quality - be harsh for poor performance],
+      "feedback": "Honest feedback on communication - use 'poor', 'inadequate' for bad performance"
     },
     "technicalKnowledge": {
-      "score": 85,
-      "feedback": "Detailed feedback on technical skills"
+      "score": [Score based on actual technical demonstration - low if minimal responses],
+      "feedback": "Realistic feedback on technical skills shown"
     },
     "problemSolving": {
-      "score": 75,
-      "feedback": "Detailed feedback on problem-solving approach"
+      "score": [Score based on actual problem-solving demonstrated],
+      "feedback": "Honest feedback on problem-solving approach"
     },
     "confidence": {
-      "score": 90,
-      "feedback": "Assessment of confidence and presentation"
+      "score": [Score based on voice confidence metrics - penalize low confidence heavily],
+      "feedback": "Assessment of confidence and presentation - be honest about nervousness"
     },
     "responseTime": {
-      "score": 70,
+      "score": [Score response timing - penalize too fast or too slow responses],
       "feedback": "Analysis of response timing and pacing"
     }
   },
@@ -121,12 +121,13 @@ Please provide a comprehensive interview feedback analysis in the following JSON
   ]
 }
 
-SCORING CRITERIA:
-- 90-100: Excellent - Ready for senior positions
-- 80-89: Good - Strong candidate with minor improvements needed
-- 70-79: Average - Solid foundation but needs development
-- 60-69: Below Average - Significant improvement needed
-- Below 60: Poor - Extensive preparation required
+STRICT SCORING CRITERIA - BE REALISTIC AND HARSH:
+- 85-100: Exceptional - Outstanding performance, rare scores only for truly excellent candidates
+- 70-84: Good - Solid performance with complete participation and quality responses
+- 50-69: Average - Acceptable but with notable areas for improvement
+- 30-49: Below Average - Poor performance, incomplete participation, needs significant work
+- 10-29: Poor - Inadequate performance, minimal participation, unprofessional
+- 0-9: Unacceptable - Failed interview, no meaningful participation
 
 Focus on:
 1. RESPONSE COMPLETION: How many questions were answered vs total questions asked
@@ -137,13 +138,22 @@ Focus on:
 6. PERFORMANCE CONSISTENCY: Confidence levels across different questions
 7. AREAS FOR IMPROVEMENT: Specific voice coaching and interview techniques
 
-CRITICAL ANALYSIS POINTS:
-- If response rate < 100%, analyze why questions were skipped
-- Voice confidence scores below 70% indicate nervousness or uncertainty
-- Response times > 10 seconds may indicate lack of preparation
-- Response times < 3 seconds may indicate rushed or superficial answers
+CRITICAL ANALYSIS POINTS - BE STRICT:
+- If response rate < 80%, give score below 50 (incomplete interview is unprofessional)
+- If response rate < 50%, give score below 30 (poor performance)
+- If response rate = 0%, give score below 15 (unacceptable)
+- Voice confidence scores below 70% should significantly lower overall score
+- Response times > 10 seconds indicate poor preparation - penalize accordingly
+- Response times < 3 seconds indicate rushed answers - penalize accordingly
+- No recording or very short recordings should be heavily penalized
 
-Provide specific, actionable feedback focusing on voice confidence, response completion, and interview performance improvement.
+MANDATORY SCORING RULES:
+1. Incomplete interviews (< 80% completion) = Maximum score of 50
+2. Poor voice confidence (< 60% average) = Reduce score by 20 points
+3. Minimal participation (< 50% completion) = Maximum score of 30
+4. No meaningful responses = Score below 15
+
+Provide brutally honest, specific feedback. Use terms like "POOR", "UNACCEPTABLE", "BELOW PROFESSIONAL STANDARDS" for bad performance. Do not sugarcoat poor interviews.
 `;
 
     const completion = await client.chat.completions.create({

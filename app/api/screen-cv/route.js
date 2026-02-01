@@ -299,8 +299,8 @@ Be strict in your assessment. Only classify as relevant CV if it contains substa
 
     // Fallback if JSON parsing fails
     const isCV = responseText.toLowerCase().includes('cv') ||
-                 responseText.toLowerCase().includes('resume') ||
-                 responseText.toLowerCase().includes('relevant');
+      responseText.toLowerCase().includes('resume') ||
+      responseText.toLowerCase().includes('relevant');
 
     return {
       isRelevantCV: isCV,

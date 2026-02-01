@@ -25,10 +25,10 @@ export default function CVScreening({ user, company, job, onScreeningComplete })
     try {
       // First, extract text from CV (this would typically be done on the backend)
       // For now, we'll simulate the screening process
-      
+
       // Simulate API call to Gemini for CV screening
       const screeningData = await simulateGeminiScreening(user, job);
-      
+
       // Save screening result to database (convert IDs to strings to avoid type issues)
       const { data, error } = await supabase
         .from('CV_Screening_Results')
@@ -83,7 +83,7 @@ export default function CVScreening({ user, company, job, onScreeningComplete })
       if (data && data.length > 0) {
         setScreeningResult(data[0]);
         toast.success('CV screening completed successfully!');
-        
+
         if (onScreeningComplete) {
           onScreeningComplete(data[0]);
         }
@@ -369,7 +369,7 @@ For accurate analysis, please ensure CV file is accessible and properly formatte
             <Download className="h-4 w-4 mr-2" />
             Download
           </Button>
-          <Button 
+          <Button
             onClick={handleScreenCV}
             disabled={screening}
             className="bg-purple-600 hover:bg-purple-700"
@@ -386,9 +386,9 @@ For accurate analysis, please ensure CV file is accessible and properly formatte
               </>
             )}
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setDeleteDialogOpen(true)}
             className="text-red-600 hover:text-red-700"
           >
@@ -421,27 +421,27 @@ For accurate analysis, please ensure CV file is accessible and properly formatte
                 {screeningResult.match_score}/10
               </Badge>
             </div>
-            
+
             <div className="space-y-3">
               <div>
                 <h4 className="font-medium text-sm">Summary</h4>
                 <p className="text-sm text-gray-600">{screeningResult.summary}</p>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-sm">Skills Match</h4>
                 <p className="text-sm text-gray-600">{screeningResult.skills_match}</p>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-sm">Experience Relevance</h4>
                 <p className="text-sm text-gray-600">{screeningResult.experience_relevance}</p>
               </div>
             </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setViewDialogOpen(true)}
               className="w-full"
             >
@@ -492,7 +492,7 @@ For accurate analysis, please ensure CV file is accessible and properly formatte
                     <Progress value={screeningResult.match_score * 10} className="w-full" />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Skills Assessment</h4>
